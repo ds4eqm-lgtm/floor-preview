@@ -199,7 +199,8 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
   </div>
 </div>
 
-<script src="products.js"></script>
+<!-- products.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
+<script src="products.js?v=2026.10.30e"></script>
 <script>
 (function(){
 "use strict";
@@ -212,7 +213,8 @@ const MODELS=["Xenova/segformer-b1-finetuned-ade-512-512","Xenova/segformer-b0-f
 const TF_URL="https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2";
 const FLOORISH=new Set(["floor","flooring","rug","carpet","carpeting","mat"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.10.30d";
+const VERSION="2026.10.30e";
+const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
 if(SHOP.name) $("brand").textContent=SHOP.name;
@@ -509,7 +511,7 @@ function buildSwatches(){
   const box=$("swatches");box.textContent="";
   PRODUCTS.forEach((p,i)=>{
     const b=document.createElement("button");b.className="sw";b.type="button";b.setAttribute("aria-pressed","false");
-    const im=document.createElement("span");im.className="img";im.style.backgroundImage="url('"+encodeURI(p.thumb||p.image)+"')";
+    const im=document.createElement("span");im.className="img";im.style.backgroundImage="url('"+bust(encodeURI(p.thumb||p.image))+"')";
     const t=document.createElement("span");t.textContent=p.name;
     b.append(im,t);b.onclick=()=>selectProduct(i);box.append(b);
   });
@@ -531,7 +533,7 @@ function selectProduct(i){
   if(tileCache[p.image])return done(tileCache[p.image]);
   const img=new Image();img.onload=()=>{tileCache[p.image]=img;done(img);};
   img.onerror=()=>chip("제품 이미지를 못 불러왔어요: "+p.image,"warn");
-  img.src=p.image;
+  img.src=bust(p.image);
 }
 
 /* ---------- 사진 올리기 ---------- */
