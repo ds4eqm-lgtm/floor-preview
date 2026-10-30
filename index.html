@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>우리집 바닥 미리보기</title>
+<meta name="description" content="우리집 사진을 올리면 데코타일이 깔린 모습을 바로 보여드려요">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* 레이아웃: 위 사진 무대, 아래 제품 고르기 / 넓은 화면은 왼쪽 무대, 오른쪽 조작판 */
+:root{
+  --paper:#f5f4f0; --card:#ffffff; --ink:#1d211f; --muted:#69706b; --line:#e1dfd8;
+  --accent:#2e5b4e; --accent-ink:#ffffff; --accent-soft:#e3ece8; --stage:#1a1b1a; --warn:#9a5b16;
+  --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#141614; --card:#1d201e; --ink:#ecefec; --muted:#9aa29c; --line:#2d322f;
+  --accent:#7fb8a5; --accent-ink:#0f1a16; --accent-soft:#22302b; --stage:#0c0d0c; --warn:#e2a35a; color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#141614; --card:#1d201e; --ink:#ecefec; --muted:#9aa29c; --line:#2d322f;
+  --accent:#7fb8a5; --accent-ink:#0f1a16; --accent-soft:#22302b; --stage:#0c0d0c; --warn:#e2a35a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 32px}
+header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.brand{font-weight:800;letter-spacing:-.02em;font-size:15px;color:var(--accent)}
+h1{font-size:21px;letter-spacing:-.03em;margin:0;font-weight:750;text-wrap:balance}
+.layout{display:grid;gap:16px}
+@media (min-width:900px){.layout{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);align-items:start}.side{position:sticky;top:14px}}
+.stage{position:relative;background:var(--stage);border-radius:var(--r);overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:260px}
+#view{display:block;max-width:100%;max-height:68vh;width:auto;height:auto;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.stage.drawing #view,.stage.comparing #view{touch-action:none;cursor:crosshair}
+.stage.comparing #view{cursor:ew-resize}
+.chip{position:absolute;left:10px;top:10px;background:rgba(15,17,16,.78);color:#f2f4f2;font-size:13px;padding:6px 11px;border-radius:999px;display:flex;align-items:center;gap:8px;max-width:calc(100% - 20px)}
+.dot{width:8px;height:8px;border-radius:50%;background:#8fd1b9;flex:none}
+.chip.busy .dot{animation:pulse 1s ease-in-out infinite}
+.chip.warn .dot{background:#f0b267}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.chip.busy .dot{animation:none}}
+.split{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);pointer-events:none}
+.split::after{content:"";position:absolute;top:50%;left:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.tag{position:absolute;bottom:10px;font-size:12px;color:#fff;background:rgba(0,0,0,.55);padding:3px 9px;border-radius:999px;pointer-events:none}
+.tag.l{left:10px}.tag.r{right:10px}
+.upload{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+button,.btn{font:inherit;border:0;cursor:pointer;border-radius:12px;padding:12px 14px;font-weight:650;font-size:15px;color:var(--ink);background:var(--card);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;min-height:46px}
+button:focus-visible,.btn:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+button:disabled{opacity:.45;cursor:default}
+.side{display:grid;gap:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.label{font-size:12.5px;color:var(--muted);font-weight:600;letter-spacing:.02em;margin:0 0 10px}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px}
+.sw{display:grid;grid-template-columns:minmax(0,1fr);justify-content:stretch;width:100%;align-content:start;gap:6px;padding:0;border:0;background:none;min-height:0;text-align:left;font-weight:500;font-size:12.5px;line-height:1.3;color:var(--ink);border-radius:10px}
+.sw .img{display:block;width:100%;align-self:start;aspect-ratio:1;border-radius:10px;background-size:cover;background-position:center;border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.sw[aria-pressed="true"] .img{border-color:var(--accent);box-shadow:0 0 0 2px var(--card) inset}
+.sw[aria-pressed="true"]{background:none}
+.info{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.info .name{font-weight:750;font-size:17px;letter-spacing:-.02em}
+.info .spec{color:var(--muted);font-size:13.5px;font-variant-numeric:tabular-nums}
+.tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.tools button{flex-direction:column;gap:3px;font-size:12.5px;padding:10px 4px;min-height:62px;font-weight:600}
+.tools svg{width:22px;height:22px}
+.row{display:grid;gap:6px;margin-top:12px}
+.row label{display:flex;justify-content:space-between;font-size:13.5px;font-weight:600}
+.row output{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:500}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hint{font-size:13px;color:var(--muted);margin:10px 0 0}
+.bar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.bar>*{flex:1 1 0}
+.note{font-size:12.5px;color:var(--muted);margin-top:4px}
+.err{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="brand" id="brand">새로고침</span>
+    <h1>우리집 바닥 미리보기</h1>
+  </header>
+
+  <div class="layout">
+    <section>
+      <div class="stage" id="stage">
+        <canvas id="view" width="10" height="10" aria-label="바닥 미리보기 화면"></canvas>
+        <div class="chip" id="chip" role="status"><span class="dot"></span><span id="chipText">준비 중이에요</span></div>
+        <div class="split" id="split" hidden></div>
+        <span class="tag l" id="tagL" hidden>지금 바닥</span>
+        <span class="tag r" id="tagR" hidden>시공 후</span>
+      </div>
+      <div class="upload">
+        <label class="btn primary" for="fileCam">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          사진 찍기
+        </label>
+        <label class="btn" for="fileAlbum">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg>
+          앨범에서 고르기
+        </label>
+        <input id="fileCam" type="file" accept="image/*" capture="environment" hidden>
+        <input id="fileAlbum" type="file" accept="image/*" hidden>
+      </div>
+      <p class="note">바닥이 넓게 보이도록 서서 앞쪽을 비스듬히 찍어 주세요. 사진은 휴대폰 안에서만 처리되고 어디에도 올라가지 않아요.</p>
+    </section>
+
+    <aside class="side">
+      <div class="panel">
+        <p class="label">색상 고르기</p>
+        <div class="swatches" id="swatches"></div>
+      </div>
+
+      <div class="panel info" id="info">
+        <div>
+          <div class="name" id="pName"></div>
+          <div class="spec" id="pSpec"></div>
+        </div>
+        <a class="btn primary" id="pLink" href="#" target="_blank" rel="noopener" hidden>제품 보러 가기</a>
+      </div>
+
+      <div class="tools">
+        <button id="tCompare" aria-pressed="false" title="지금 바닥과 비교">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg>비교</button>
+        <button id="tRotate" title="타일 방향 바꾸기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>방향</button>
+        <button id="tBrush" aria-pressed="false" title="바닥 범위 고치기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/></svg>바닥 고치기</button>
+        <button id="tAdjust" aria-pressed="false" title="원근과 크기 맞추기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>세부 조정</button>
+      </div>
+
+      <div class="panel" id="brushPanel" hidden>
+        <p class="label">손가락으로 바닥 범위 고치기</p>
+        <div class="seg">
+          <button id="bAdd" aria-pressed="true">바닥 칠하기</button>
+          <button id="bErase" aria-pressed="false">지우기</button>
+        </div>
+        <div class="row">
+          <label for="bSize">붓 크기 <output id="bSizeOut"></output></label>
+          <input id="bSize" type="range" min="10" max="160" value="60">
+        </div>
+        <div class="bar">
+          <button id="bUndo">되돌리기</button>
+          <button id="bDone" class="primary">다 했어요</button>
+        </div>
+        <p class="hint">파랗게 보이는 곳에만 타일이 깔려요. 가구나 벽에 묻었으면 지우고, 빠진 바닥은 칠해 주세요.</p>
+      </div>
+
+      <div class="panel" id="adjustPanel" hidden>
+        <p class="label">노란 격자가 바닥에 반듯하게 누워 보이도록 맞춰 주세요</p>
+        <div class="row">
+          <label for="aPitch">카메라 기울기 <output id="aPitchOut"></output></label>
+          <input id="aPitch" type="range" min="2" max="80" step="0.5">
+        </div>
+        <div class="row">
+          <label for="aRoll">좌우 수평 <output id="aRollOut"></output></label>
+          <input id="aRoll" type="range" min="-15" max="15" step="0.5" value="0">
+        </div>
+        <div class="row">
+          <label for="aFov">화각 <output id="aFovOut"></output></label>
+          <input id="aFov" type="range" min="-60" max="60" value="0">
+        </div>
+        <div class="row">
+          <label for="aScale">타일 크기 <output id="aScaleOut"></output></label>
+          <input id="aScale" type="range" min="50" max="200" value="100">
+        </div>
+        <div class="row">
+          <label for="aRot">타일 방향 <output id="aRotOut"></output></label>
+          <input id="aRot" type="range" min="0" max="180" step="1" value="90">
+        </div>
+        <div class="row">
+          <label for="aShade">그림자 살리기 <output id="aShadeOut"></output></label>
+          <input id="aShade" type="range" min="0" max="100" value="85">
+        </div>
+        <div class="bar">
+          <button id="aReset">처음 값으로</button>
+          <button id="aDone" class="primary">다 했어요</button>
+        </div>
+      </div>
+
+      <button class="primary" id="tSave" style="width:100%">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        결과 사진 저장하기
+      </button>
+      <p class="note" id="gpuNote"></p>
+    </aside>
+  </div>
+</div>
+
+<script src="products.js"></script>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const PRODUCTS=window.PRODUCTS||[];
+const SHOP=window.SHOP||{name:"",tagline:""};
+const params=new URLSearchParams(location.search);
+const MAX_SIDE=1600;
+const MODELS=["Xenova/segformer-b1-finetuned-ade-512-512","Xenova/segformer-b0-finetuned-ade-512-512"];
+const TF_URL="https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2";
+const FLOORISH=new Set(["floor","flooring","rug","carpet","carpeting","mat"]);
+
+if(SHOP.name) $("brand").textContent=SHOP.name;
+
+const S={
+  W:0,H:0,photoCanvas:null,maskCanvas:null,maskCtx:null,
+  product:null,tileReady:false,
+  pitch:24,autoPitch:24,roll:0,fov:0,scale:1,rot:90,shade:.85,
+  split:-1,compare:false,brush:false,brushAdd:true,brushSize:60,adjust:false,
+  undo:[],aiBusy:false
+};
+
+/* ---------- 상태 표시 ---------- */
+function chip(text,kind){
+  $("chipText").textContent=text;
+  const c=$("chip");c.classList.toggle("busy",kind==="busy");c.classList.toggle("warn",kind==="warn");
+  c.hidden=!text;
+}
+
+/* ---------- WebGL ---------- */
+const view=$("view");
+const gl=view.getContext("webgl2",{preserveDrawingBuffer:true,antialias:false,premultipliedAlpha:false});
+if(!gl){chip("이 브라우저에서는 미리보기를 쓸 수 없어요. 크롬이나 사파리 최신 버전으로 열어 주세요","warn");}
+
+const VS=`#version 300 es
+in vec2 p;out vec2 vUv;
+void main(){vUv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}`;
+const FS=`#version 300 es
+precision highp float;
+uniform sampler2D uPhoto,uMask,uShade,uTile;
+uniform vec2 uSize,uMaskTexel,uTileMM;
+uniform vec3 uH0,uH1,uH2;
+uniform int uPattern;
+uniform float uRot,uShadeAmt,uSplit,uMaskView,uGrid,uHasTile;
+in vec2 vUv;out vec4 o;
+float h2(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float h1(float x){return fract(sin(x*91.345+3.17)*47453.123);}
+void main(){
+  vec2 uv=vUv;
+  vec3 photo=texture(uPhoto,uv).rgb;
+  float m=0.;
+  for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++)m+=texture(uMask,uv+vec2(float(i),float(j))*uMaskTexel*1.6).r;
+  m/=9.;
+  vec3 col=photo;
+  vec3 hp=vec3(uv*uSize,1.);
+  float den=dot(uH2,hp);
+  float gridLine=0.;
+  if(den>1e-6&&uHasTile>.5){
+    vec2 P=vec2(dot(uH0,hp),dot(uH1,hp))/den;
+    float c=cos(uRot),s=sin(uRot);
+    P=vec2(c*P.x+s*P.y,-s*P.x+c*P.y);
+    vec2 sz=uTileMM;
+    float row=floor(P.y/sz.y);
+    float off=uPattern==1?h1(row)*sz.x:(uPattern==2?mod(row,2.)*.5*sz.x:0.);
+    vec2 cf=vec2(P.x+off,P.y)/sz;
+    vec2 cell=floor(cf);
+    vec2 lc=cf-cell;
+    float r1=h2(cell+vec2(0.,row*.37)),r2=h2(cell*1.7+5.3);
+    vec2 tuv=r1>.5?1.-lc:lc;
+    vec3 t=textureGrad(uTile,tuv,dFdx(cf),dFdy(cf)).rgb;
+    t*=1.+(r2-.5)*.07;
+    vec2 dmm=min(lc,1.-lc)*sz;
+    float fw=max(length(dFdx(P)),length(dFdy(P)));
+    float d=min(dmm.x,dmm.y);
+    float jw=.6;
+    float jl=1.-smoothstep(jw-fw*.6,jw+fw*.6,d);
+    t*=1.-jl*clamp(1.-fw/8.,0.,1.)*.32;
+    float sh=texture(uShade,uv).r*2.;
+    t*=mix(1.,sh,uShadeAmt);
+    col=mix(photo,t,m);
+    if(uGrid>0.){
+      vec2 g=P/600.;
+      vec2 gd=abs(fract(g-.5)-.5)/max(fwidth(g),vec2(1e-5));
+      gridLine=(1.-clamp(min(gd.x,gd.y)-.5,0.,1.))*clamp(1.-max(fwidth(g).x,fwidth(g).y)*6.,0.,1.);
+    }
+  }
+  if(uMaskView>0.)col=mix(col,vec3(.18,.52,1.),m*.38*uMaskView);
+  if(gridLine>0.)col=mix(col,vec3(1.,.82,.18),gridLine*uGrid*(.35+.55*m));
+  if(uv.x<uSplit)col=photo;
+  o=vec4(col,1.);
+}`;
+let prog,U={},TEX={};
+function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+function initGL(){
+  prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,FS));
+  gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  const loc=gl.getAttribLocation(prog,"p");gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  ["uPhoto","uMask","uShade","uTile","uSize","uMaskTexel","uTileMM","uH0","uH1","uH2","uPattern","uRot","uShadeAmt","uSplit","uMaskView","uGrid","uHasTile"].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
+  ["photo","mask","shade","tile"].forEach((n,i)=>{TEX[n]=gl.createTexture();gl.uniform1i(U["u"+n[0].toUpperCase()+n.slice(1)],i);});
+  const an=gl.getExtension("EXT_texture_filter_anisotropic");TEX.aniso=an;
+}
+function upload(name,src,mip){
+  const unit=["photo","mask","shade","tile"].indexOf(name);
+  gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,TEX[name]);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  if(mip){gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+    if(TEX.aniso)gl.texParameterf(gl.TEXTURE_2D,TEX.aniso.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(8,gl.getParameter(TEX.aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));}
+  else gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+}
+
+/* 사진 좌표를 바닥 평면 좌표(mm)로 바꾸는 행렬: 카메라 높이 1.4m, 기울기, 수평, 화각으로 계산 */
+function focal(){return Math.max(S.W,S.H)*0.728*Math.pow(2,S.fov/100);}
+function homography(){
+  const W=S.W,H=S.H,cx=W/2,cy=H/2,f=focal();
+  const th=S.pitch*Math.PI/180,ct=Math.cos(th),st=Math.sin(th);
+  const r=S.roll*Math.PI/180,cr=Math.cos(r),sr=Math.sin(r);
+  const hc=1400/S.scale;
+  const U0=[cr,-sr,-cr*cx+sr*cy];
+  const V0=[sr,cr,-sr*cx-cr*cy];
+  const R0=U0.map(x=>x*hc/f);
+  const R1=V0.map(x=>-x*hc*st/f);R1[2]+=hc*ct;
+  const R2=V0.map(x=>x*ct/f);R2[2]+=st;
+  return [R0,R1,R2];
+}
+
+let raf=0;
+function render(){if(!raf)raf=requestAnimationFrame(draw);}
+function draw(){
+  raf=0;if(!gl||!S.W)return;
+  gl.viewport(0,0,S.W,S.H);
+  const [R0,R1,R2]=homography();
+  gl.uniform3fv(U.uH0,R0);gl.uniform3fv(U.uH1,R1);gl.uniform3fv(U.uH2,R2);
+  gl.uniform2f(U.uSize,S.W,S.H);
+  gl.uniform2f(U.uMaskTexel,1/S.W,1/S.H);
+  const p=S.product||{width:920,height:152,pattern:"stagger"};
+  gl.uniform2f(U.uTileMM,+p.width||600,+p.height||600);
+  gl.uniform1i(U.uPattern,p.pattern==="stagger"?1:p.pattern==="half"?2:0);
+  gl.uniform1f(U.uRot,S.rot*Math.PI/180);
+  gl.uniform1f(U.uShadeAmt,S.shade);
+  gl.uniform1f(U.uSplit,S.compare?S.split:-1);
+  gl.uniform1f(U.uMaskView,S.brush?1:0);
+  gl.uniform1f(U.uGrid,S.adjust?1:0);
+  gl.uniform1f(U.uHasTile,S.tileReady?1:0);
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+}
+
+/* ---------- 사진, 바닥 범위, 그림자 ---------- */
+function setPhoto(img){
+  let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+  const k=Math.min(1,MAX_SIDE/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
+  const c=document.createElement("canvas");c.width=w;c.height=h;
+  const x=c.getContext("2d");x.imageSmoothingQuality="high";x.drawImage(img,0,0,w,h);
+  S.photoCanvas=c;S.W=w;S.H=h;view.width=w;view.height=h;
+  S.maskCanvas=document.createElement("canvas");S.maskCanvas.width=w;S.maskCanvas.height=h;
+  S.maskCtx=S.maskCanvas.getContext("2d",{willReadFrequently:true});
+  S.maskCtx.fillStyle="#000";S.maskCtx.fillRect(0,0,w,h);
+  S.undo=[];
+  upload("photo",c,false);uploadMask();computeShade();
+  if(S.compare)updateSplitUI();
+  render();
+}
+function uploadMask(){upload("mask",S.maskCanvas,false);}
+function setMask(src){
+  const x=S.maskCtx;x.save();x.fillStyle="#000";x.fillRect(0,0,S.W,S.H);
+  x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";x.drawImage(src,0,0,S.W,S.H);x.restore();
+  uploadMask();
+}
+function fallbackMask(){
+  const x=S.maskCtx;x.fillStyle="#000";x.fillRect(0,0,S.W,S.H);
+  x.fillStyle="#fff";x.fillRect(0,Math.round(S.H*.5),S.W,S.H);uploadMask();
+}
+function shrink(src,w,h){
+  let c=src,cw=src.width,ch=src.height;
+  while(cw/2>w){const n=document.createElement("canvas");n.width=Math.round(cw/2);n.height=Math.round(ch/2);
+    n.getContext("2d").drawImage(c,0,0,n.width,n.height);c=n;cw=n.width;ch=n.height;}
+  const n=document.createElement("canvas");n.width=w;n.height=h;
+  const x=n.getContext("2d",{willReadFrequently:true});x.imageSmoothingQuality="high";x.drawImage(c,0,0,w,h);return x.getImageData(0,0,w,h).data;
+}
+function boxBlur(a,w,h,r){
+  const t=new Float32Array(a.length),o=new Float32Array(a.length);
+  for(let y=0;y<h;y++){for(let x=0;x<w;x++){let s=0,n=0;for(let k=-r;k<=r;k++){const xx=x+k;if(xx>=0&&xx<w){s+=a[y*w+xx];n++;}}t[y*w+x]=s/n;}}
+  for(let y=0;y<h;y++){for(let x=0;x<w;x++){let s=0,n=0;for(let k=-r;k<=r;k++){const yy=y+k;if(yy>=0&&yy<h){s+=t[yy*w+x];n++;}}o[y*w+x]=s/n;}}
+  return o;
+}
+/* 원래 사진의 빛과 그림자만 뽑아서 새 바닥에 입히기 (바닥 무늬는 흐려서 지움) */
+function computeShade(){
+  const sw=Math.max(24,Math.round(S.W/14)),shh=Math.max(24,Math.round(S.H*sw/S.W));
+  const pd=shrink(S.photoCanvas,sw,shh),md=shrink(S.maskCanvas,sw,shh);
+  const n=sw*shh,L=new Float32Array(n),M=new Float32Array(n),LM=new Float32Array(n);
+  let sL=0,sM=0;
+  for(let i=0;i<n;i++){
+    const r=pd[i*4]/255,g=pd[i*4+1]/255,b=pd[i*4+2]/255;
+    const l=Math.pow(.2126*r*r+.7152*g*g+.0722*b*b,.5);
+    const m=md[i*4]/255;L[i]=l;M[i]=m;LM[i]=l*m;sL+=l*m;sM+=m;
+  }
+  const mean=sM>1?sL/sM:.5;
+  let bLM=boxBlur(LM,sw,shh,2),bM=boxBlur(M,sw,shh,2);
+  bLM=boxBlur(bLM,sw,shh,1);bM=boxBlur(bM,sw,shh,1);
+  const c=document.createElement("canvas");c.width=sw;c.height=shh;
+  const x=c.getContext("2d"),id=x.createImageData(sw,shh);
+  for(let i=0;i<n;i++){
+    let s=bM[i]>.04?(bLM[i]/bM[i])/mean:1;
+    s=Math.max(.35,Math.min(1.7,s));
+    const v=Math.round(s/2*255);
+    id.data[i*4]=v;id.data[i*4+1]=v;id.data[i*4+2]=v;id.data[i*4+3]=255;
+  }
+  x.putImageData(id,0,0);upload("shade",c,false);
+}
+/* 바닥 윗선 위치로 카메라 기울기 추정 */
+function estimatePitch(){
+  const sw=Math.min(200,S.W),shh=Math.round(S.H*sw/S.W);
+  const md=shrink(S.maskCanvas,sw,shh);
+  let top=-1,area=0;
+  for(let y=0;y<shh;y++){let c=0;for(let x=0;x<sw;x++)c+=md[(y*sw+x)*4]>127?1:0;area+=c;if(top<0&&c>sw*.08)top=y;}
+  if(top<0||area<sw*shh*.03)return null;
+  const f=focal(),cy=S.H/2,topY=top/shh*S.H;
+  const horizon=topY-f*Math.tan(18*Math.PI/180);
+  const th=Math.atan((cy-horizon)/f)*180/Math.PI;
+  return Math.max(6,Math.min(72,th));
+}
+
+/* ---------- 바닥 자동 인식 ---------- */
+let segP=null,segName="";
+function ensureModel(){
+  if(segP)return segP;
+  segP=(async()=>{
+    const tf=await import(TF_URL);
+    tf.env.allowLocalModels=false;
+    const files={};
+    const cb=e=>{
+      if(e&&e.status==="progress"&&e.total){files[e.file]=[e.loaded,e.total];
+        let a=0,b=0;for(const k in files){a+=files[k][0];b+=files[k][1];}
+        if(S.aiBusy)chip("바닥 인식 준비 중 "+Math.round(a/b*100)+"% (처음 한 번만 받아요)","busy");}
+    };
+    let last;
+    for(const m of MODELS){
+      try{const p=await tf.pipeline("image-segmentation",m,{device:"wasm",dtype:"q8",progress_callback:cb});segName=m;return p;}
+      catch(e){last=e;console.warn("model failed",m,e);}
+    }
+    throw last;
+  })();
+  segP.catch(()=>{segP=null;});
+  return segP;
+}
+async function detectFloor(){
+  S.aiBusy=true;chip("바닥 찾는 중이에요","busy");
+  try{
+    const seg=await ensureModel();
+    chip("바닥 찾는 중이에요","busy");
+    await new Promise(r=>setTimeout(r,30));
+    const k=Math.min(1,768/Math.max(S.W,S.H));
+    const c=document.createElement("canvas");c.width=Math.round(S.W*k);c.height=Math.round(S.H*k);
+    c.getContext("2d").drawImage(S.photoCanvas,0,0,c.width,c.height);
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.92));
+    const url=URL.createObjectURL(blob);
+    const t=Math.min(1,320/Math.max(c.width,c.height)),tw=Math.round(c.width*t),th=Math.round(c.height*t);
+    let out;try{out=await seg(url,{target_sizes:[[th,tw]]});}finally{URL.revokeObjectURL(url);}
+    const mc=document.createElement("canvas");mc.width=tw;mc.height=th;
+    const mx=mc.getContext("2d"),id=mx.createImageData(mc.width,mc.height);
+    let hit=0;
+    for(const s of out){
+      const words=String(s.label||"").toLowerCase().split(/[^a-z]+/);
+      if(!words.some(w=>FLOORISH.has(w)))continue;
+      const m=s.mask,ch=m.channels||1,d=m.data;
+      const sx=m.width/mc.width,sy=m.height/mc.height;
+      for(let y=0;y<mc.height;y++)for(let x=0;x<mc.width;x++){
+        const v=d[(Math.floor(y*sy)*m.width+Math.floor(x*sx))*ch];
+        if(v>127){const i=(y*mc.width+x)*4;if(!id.data[i]){hit++;}id.data[i]=id.data[i+1]=id.data[i+2]=255;}
+      }
+    }
+    for(let i=3;i<id.data.length;i+=4)id.data[i]=255;
+    mx.putImageData(id,0,0);
+    if(hit<mc.width*mc.height*.03){fallbackMask();applyAuto();chip("바닥을 잘 못 찾았어요. 바닥 고치기로 칠해 주세요","warn");}
+    else{setMask(mc);applyAuto();chip("다른 색상도 눌러 보세요","");}
+  }catch(e){
+    console.error(e);fallbackMask();applyAuto();
+    chip("자동 인식이 안 됐어요. 바닥 고치기로 범위를 칠해 주세요","warn");
+  }finally{S.aiBusy=false;}
+}
+function applyAuto(){
+  const p=estimatePitch();S.autoPitch=p==null?35:p;S.pitch=S.autoPitch;S.roll=0;S.fov=0;S.scale=1;
+  syncAdjust();computeShade();render();
+}
+
+/* ---------- 제품 ---------- */
+function specText(p){
+  const pat={stagger:"엇갈림 시공",half:"반장 엇갈림 시공",grid:"바둑판 시공"}[p.pattern]||"";
+  return (+p.width)+" × "+(+p.height)+" mm"+(pat?" · "+pat:"");
+}
+function buildSwatches(){
+  const box=$("swatches");box.textContent="";
+  PRODUCTS.forEach((p,i)=>{
+    const b=document.createElement("button");b.className="sw";b.type="button";b.setAttribute("aria-pressed","false");
+    const im=document.createElement("span");im.className="img";im.style.backgroundImage="url('"+encodeURI(p.image)+"')";
+    const t=document.createElement("span");t.textContent=p.name;
+    b.append(im,t);b.onclick=()=>selectProduct(i);box.append(b);
+  });
+}
+const tileCache={};
+function selectProduct(i){
+  const p=PRODUCTS[i];if(!p)return;
+  S.product=p;
+  [...$("swatches").children].forEach((b,j)=>b.setAttribute("aria-pressed",String(j===i)));
+  $("pName").textContent=p.name;$("pSpec").textContent=specText(p);
+  const a=$("pLink");if(p.url){a.href=p.url;a.hidden=false;}else a.hidden=true;
+  const done=img=>{if(S.product!==p)return;upload("tile",img,true);S.tileReady=true;render();};
+  if(tileCache[p.image])return done(tileCache[p.image]);
+  const img=new Image();img.onload=()=>{tileCache[p.image]=img;done(img);};
+  img.onerror=()=>chip("제품 이미지를 못 불러왔어요: "+p.image,"warn");
+  img.src=p.image;
+}
+
+/* ---------- 사진 올리기 ---------- */
+function onFile(e){
+  const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
+  const url=URL.createObjectURL(f);const img=new Image();
+  img.onload=()=>{URL.revokeObjectURL(url);exitModes();setPhoto(img);
+    if(params.get("noai")==="1"){fallbackMask();applyAuto();chip("범위를 직접 칠해 주세요","warn");}
+    else detectFloor();};
+  img.onerror=()=>{URL.revokeObjectURL(url);chip("사진을 열 수 없어요. 다른 사진으로 해 주세요","warn");};
+  img.src=url;
+}
+$("fileCam").addEventListener("change",onFile);
+$("fileAlbum").addEventListener("change",onFile);
+["fileCam","fileAlbum"].forEach(id=>document.querySelector('label[for="'+id+'"]').addEventListener("click",()=>{if(params.get("noai")!=="1")ensureModel().catch(()=>{});}));
+
+/* ---------- 도구 ---------- */
+function exitModes(){setBrush(false);setAdjust(false);}
+function setCompare(on){
+  S.compare=on;$("tCompare").setAttribute("aria-pressed",String(on));
+  if(on){setBrush(false);setAdjust(false);S.split=.5;}
+  $("stage").classList.toggle("comparing",on);
+  $("split").hidden=$("tagL").hidden=$("tagR").hidden=!on;
+  updateSplitUI();render();
+}
+function updateSplitUI(){
+  if(!S.compare)return;
+  const st=$("stage").getBoundingClientRect(),r=view.getBoundingClientRect();
+  $("split").style.left=(r.left-st.left+r.width*S.split-1)+"px";
+  $("split").style.top=(r.top-st.top)+"px";$("split").style.bottom="auto";$("split").style.height=r.height+"px";
+}
+function setBrush(on){
+  S.brush=on;$("tBrush").setAttribute("aria-pressed",String(on));$("brushPanel").hidden=!on;
+  $("stage").classList.toggle("drawing",on);
+  if(on){if(S.compare)setCompare(false);setAdjust(false);chip("파란 곳이 바닥으로 잡힌 범위예요","");}
+  else computeShade();
+  render();
+}
+function setAdjust(on){
+  S.adjust=on;$("tAdjust").setAttribute("aria-pressed",String(on));$("adjustPanel").hidden=!on;
+  if(on){if(S.compare)setCompare(false);setBrush(false);}
+  render();
+}
+$("tCompare").onclick=()=>setCompare(!S.compare);
+$("tBrush").onclick=()=>setBrush(!S.brush);
+$("tAdjust").onclick=()=>setAdjust(!S.adjust);
+$("tRotate").onclick=()=>{const steps=[90,0,45,135];const i=steps.indexOf(Math.round(S.rot));S.rot=steps[(i+1)%steps.length];syncAdjust();render();};
+$("bAdd").onclick=()=>{S.brushAdd=true;$("bAdd").setAttribute("aria-pressed","true");$("bErase").setAttribute("aria-pressed","false");};
+$("bErase").onclick=()=>{S.brushAdd=false;$("bAdd").setAttribute("aria-pressed","false");$("bErase").setAttribute("aria-pressed","true");};
+$("bSize").oninput=e=>{S.brushSize=+e.target.value;$("bSizeOut").textContent=S.brushSize;};
+$("bSizeOut").textContent=S.brushSize;
+$("bUndo").onclick=()=>{const d=S.undo.pop();if(d){S.maskCtx.putImageData(d,0,0);uploadMask();render();}};
+$("bDone").onclick=()=>setBrush(false);
+$("aDone").onclick=()=>setAdjust(false);
+$("aReset").onclick=()=>{S.pitch=S.autoPitch;S.roll=0;S.fov=0;S.scale=1;S.rot=90;S.shade=.85;syncAdjust();render();};
+
+const sliders=[
+  ["aPitch",v=>S.pitch=v,()=>S.pitch,v=>v.toFixed(1)+"°"],
+  ["aRoll",v=>S.roll=v,()=>S.roll,v=>(v>0?"+":"")+v.toFixed(1)+"°"],
+  ["aFov",v=>S.fov=v,()=>S.fov,v=>(v>0?"+":"")+v],
+  ["aScale",v=>S.scale=v/100,()=>Math.round(S.scale*100),v=>v+"%"],
+  ["aRot",v=>S.rot=v,()=>S.rot,v=>v+"°"],
+  ["aShade",v=>S.shade=v/100,()=>Math.round(S.shade*100),v=>v+"%"]
+];
+sliders.forEach(([id,set,,fmt])=>{$(id).addEventListener("input",e=>{const v=+e.target.value;set(v);$(id+"Out").textContent=fmt(v);if(id==="aShade"||id==="aPitch"||id==="aFov"||id==="aScale"){}render();});});
+function syncAdjust(){sliders.forEach(([id,,get,fmt])=>{const v=get();$(id).value=v;$(id+"Out").textContent=fmt(+v);});}
+
+/* ---------- 손가락 입력: 붓, 비교선 ---------- */
+let drawing=false,lastPt=null;
+function toImg(e){const r=view.getBoundingClientRect();return {x:(e.clientX-r.left)/r.width*S.W,y:(e.clientY-r.top)/r.height*S.H,k:S.W/r.width};}
+function stamp(x,y,rad){
+  const c=S.maskCtx,col=S.brushAdd?"255,255,255":"0,0,0";
+  const g=c.createRadialGradient(x,y,rad*.55,x,y,rad);g.addColorStop(0,"rgba("+col+",1)");g.addColorStop(1,"rgba("+col+",0)");
+  c.fillStyle=g;c.beginPath();c.arc(x,y,rad,0,Math.PI*2);c.fill();
+}
+view.addEventListener("pointerdown",e=>{
+  if(S.brush){
+    drawing=true;view.setPointerCapture(e.pointerId);
+    S.undo.push(S.maskCtx.getImageData(0,0,S.W,S.H));if(S.undo.length>8)S.undo.shift();
+    const p=toImg(e);lastPt=p;stamp(p.x,p.y,S.brushSize/2*p.k);uploadMask();render();e.preventDefault();
+  }else if(S.compare){drawing=true;view.setPointerCapture(e.pointerId);moveSplit(e);e.preventDefault();}
+});
+view.addEventListener("pointermove",e=>{
+  if(!drawing)return;
+  if(S.brush){
+    const p=toImg(e),rad=S.brushSize/2*p.k,dx=p.x-lastPt.x,dy=p.y-lastPt.y,dist=Math.hypot(dx,dy),step=Math.max(1,rad/4);
+    for(let t=step;t<=dist;t+=step)stamp(lastPt.x+dx*t/dist,lastPt.y+dy*t/dist,rad);
+    if(dist>=step)lastPt=p;
+    uploadMask();render();
+  }else if(S.compare)moveSplit(e);
+});
+["pointerup","pointercancel"].forEach(t=>view.addEventListener(t,()=>{drawing=false;}));
+function moveSplit(e){const r=view.getBoundingClientRect();S.split=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));updateSplitUI();render();}
+window.addEventListener("resize",updateSplitUI);
+
+/* ---------- 저장 ---------- */
+$("tSave").onclick=async()=>{
+  if(!S.W)return;
+  const wasCmp=S.compare,wasB=S.brush,wasA=S.adjust;S.compare=false;S.brush=false;S.adjust=false;draw();
+  const c=document.createElement("canvas");c.width=S.W;c.height=S.H;const x=c.getContext("2d");x.drawImage(view,0,0);
+  S.compare=wasCmp;S.brush=wasB;S.adjust=wasA;render();
+  const fs=Math.max(14,Math.round(S.W/42)),pad=Math.round(fs*.8);
+  const label=[SHOP.name,S.product&&S.product.name].filter(Boolean).join("  ");
+  if(label){x.font="600 "+fs+"px "+getComputedStyle(document.body).fontFamily;const tw=x.measureText(label).width;
+    x.fillStyle="rgba(0,0,0,.5)";x.fillRect(S.W-tw-pad*3,S.H-fs-pad*2.4,tw+pad*2,fs+pad*1.4);
+    x.fillStyle="#fff";x.textBaseline="middle";x.fillText(label,S.W-tw-pad*2,S.H-fs/2-pad*1.7);}
+  const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.92));
+  const name=(SHOP.name||"floor")+"_"+(S.product?S.product.code||"preview":"preview")+".jpg";
+  const file=new File([blob],name,{type:"image/jpeg"});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"우리집 바닥 미리보기"});return;}}catch(e){if(e&&e.name==="AbortError")return;}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+};
+
+/* ---------- 시작 ---------- */
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
+async function start(){
+  if(!gl)return;
+  try{initGL();}catch(e){console.error(e);chip("미리보기 화면을 켤 수 없어요","warn");return;}
+  buildSwatches();
+  const want=params.get("item");let idx=Math.max(0,PRODUCTS.findIndex(p=>p.code===want));
+  selectProduct(idx);
+  syncAdjust();
+  let room=null;
+  try{room=await loadImg("sample/room.jpg");}catch(e){chip("우리집 사진을 올려 보세요","");return;}
+  setPhoto(room);
+  try{
+    const mask=await loadImg("sample/room-mask.png");
+    setMask(mask);applyAuto();chip("예시 방이에요. 우리집 사진을 올려 보세요","");
+  }catch(e){
+    await detectFloor();
+    if(!$("chip").classList.contains("warn"))chip("예시 방이에요. 우리집 사진을 올려 보세요","");
+  }
+}
+window.__sim={S,setMask:src=>{setMask(src);applyAuto();},render,draw,selectProduct,homography};
+start();
+})();
+</script>
+</body>
+</html>
