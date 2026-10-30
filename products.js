@@ -11,8 +11,8 @@
 
 window.PRODUCTS = [
   {
-    name: "색상 1",
-    code: "t01",
+    name: "NPT16252",
+    code: "NPT16252",
     image: "tiles/tile-01.jpg",
     thumb: "thumbs/tile-01.jpg",
     width: 600,
@@ -21,8 +21,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 2",
-    code: "t02",
+    name: "NPT16272",
+    code: "NPT16272",
     image: "tiles/tile-02.jpg",
     thumb: "thumbs/tile-02.jpg",
     width: 600,
@@ -31,8 +31,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 3",
-    code: "t03",
+    name: "NPT16282",
+    code: "NPT16282",
     image: "tiles/tile-03.jpg",
     thumb: "thumbs/tile-03.jpg",
     width: 600,
@@ -41,8 +41,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 4",
-    code: "t04",
+    name: "NPT16302",
+    code: "NPT16302",
     image: "tiles/tile-04.jpg",
     thumb: "thumbs/tile-04.jpg",
     width: 600,
@@ -51,8 +51,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 5",
-    code: "t05",
+    name: "NPT16312",
+    code: "NPT16312",
     image: "tiles/tile-05.jpg",
     thumb: "thumbs/tile-05.jpg",
     width: 600,
@@ -61,8 +61,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 6",
-    code: "t06",
+    name: "NPT16320",
+    code: "NPT16320",
     image: "tiles/tile-06.jpg",
     thumb: "thumbs/tile-06.jpg",
     width: 600,
@@ -71,8 +71,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 7",
-    code: "t07",
+    name: "NPT16332",
+    code: "NPT16332",
     image: "tiles/tile-07.jpg",
     thumb: "thumbs/tile-07.jpg",
     width: 600,
@@ -81,8 +81,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 8",
-    code: "t08",
+    name: "NPT16342",
+    code: "NPT16342",
     image: "tiles/tile-08.jpg",
     thumb: "thumbs/tile-08.jpg",
     width: 600,
@@ -91,8 +91,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 9",
-    code: "t09",
+    name: "NPT16352",
+    code: "NPT16352",
     image: "tiles/tile-09.jpg",
     thumb: "thumbs/tile-09.jpg",
     width: 600,
@@ -101,8 +101,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 10",
-    code: "t10",
+    name: "NPT16362",
+    code: "NPT16362",
     image: "tiles/tile-10.jpg",
     thumb: "thumbs/tile-10.jpg",
     width: 600,
@@ -111,8 +111,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 11",
-    code: "t11",
+    name: "NPT16372",
+    code: "NPT16372",
     image: "tiles/tile-11.jpg",
     thumb: "thumbs/tile-11.jpg",
     width: 600,
@@ -121,8 +121,8 @@ window.PRODUCTS = [
     url: ""
   },
   {
-    name: "색상 12",
-    code: "t12",
+    name: "NPT16382",
+    code: "NPT16382",
     image: "tiles/tile-12.jpg",
     thumb: "thumbs/tile-12.jpg",
     width: 600,

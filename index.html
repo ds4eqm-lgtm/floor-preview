@@ -212,7 +212,7 @@ const MODELS=["Xenova/segformer-b1-finetuned-ade-512-512","Xenova/segformer-b0-f
 const TF_URL="https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2";
 const FLOORISH=new Set(["floor","flooring","rug","carpet","carpeting","mat"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.10.30c";
+const VERSION="2026.10.30d";
 const PICK_KEY="floorPickAt";
 
 if(SHOP.name) $("brand").textContent=SHOP.name;
@@ -720,7 +720,7 @@ async function start(){
   if(!gl)return;
   try{initGL();}catch(e){console.error(e);chip("미리보기 화면을 켤 수 없어요","warn");return;}
   buildSwatches();
-  const want=params.get("item");let idx=Math.max(0,PRODUCTS.findIndex(p=>p.code===want));
+  const want=String(params.get("item")||"").trim().toLowerCase();let idx=Math.max(0,PRODUCTS.findIndex(p=>String(p.code).toLowerCase()===want));
   selectProduct(idx);
   syncAdjust();
   const interrupted=pickInterrupted();
