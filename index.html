@@ -61,6 +61,12 @@ button:disabled{opacity:.45;cursor:default}
 .sw .img{display:block;width:100%;align-self:start;aspect-ratio:1;border-radius:10px;background-size:cover;background-position:center;border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
 .sw[aria-pressed="true"] .img{border-color:var(--accent);box-shadow:0 0 0 2px var(--card) inset}
 .sw[aria-pressed="true"]{background:none}
+.layout>*,.side>*{min-width:0}
+@media (max-width:899px){
+  #view{max-height:56vh}
+  .swatches{position:relative;display:flex;overflow-x:auto;gap:10px;margin-inline:-14px;padding:0 14px 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .sw{flex:0 0 74px;width:74px;scroll-snap-align:start}
+}
 .info{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .info .name{font-weight:750;font-size:17px;letter-spacing:-.02em}
 .info .spec{color:var(--muted);font-size:13.5px;font-variant-numeric:tabular-nums}
@@ -206,7 +212,7 @@ const MODELS=["Xenova/segformer-b1-finetuned-ade-512-512","Xenova/segformer-b0-f
 const TF_URL="https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2";
 const FLOORISH=new Set(["floor","flooring","rug","carpet","carpeting","mat"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.10.30b";
+const VERSION="2026.10.30c";
 const PICK_KEY="floorPickAt";
 
 if(SHOP.name) $("brand").textContent=SHOP.name;
@@ -503,7 +509,7 @@ function buildSwatches(){
   const box=$("swatches");box.textContent="";
   PRODUCTS.forEach((p,i)=>{
     const b=document.createElement("button");b.className="sw";b.type="button";b.setAttribute("aria-pressed","false");
-    const im=document.createElement("span");im.className="img";im.style.backgroundImage="url('"+encodeURI(p.image)+"')";
+    const im=document.createElement("span");im.className="img";im.style.backgroundImage="url('"+encodeURI(p.thumb||p.image)+"')";
     const t=document.createElement("span");t.textContent=p.name;
     b.append(im,t);b.onclick=()=>selectProduct(i);box.append(b);
   });
@@ -512,7 +518,13 @@ const tileCache={};
 function selectProduct(i){
   const p=PRODUCTS[i];if(!p)return;
   S.product=p;
-  [...$("swatches").children].forEach((b,j)=>b.setAttribute("aria-pressed",String(j===i)));
+  const box=$("swatches");
+  [...box.children].forEach((b,j)=>b.setAttribute("aria-pressed",String(j===i)));
+  const btn=box.children[i];
+  if(btn&&box.scrollWidth>box.clientWidth+2){
+    const left=Math.max(0,btn.offsetLeft-(box.clientWidth-btn.offsetWidth)/2);
+    try{box.scrollTo({left,behavior:"smooth"});}catch(e){box.scrollLeft=left;}
+  }
   $("pName").textContent=p.name;$("pSpec").textContent=specText(p);
   const a=$("pLink");if(p.url){a.href=p.url;a.hidden=false;}else a.hidden=true;
   const done=img=>{if(S.product!==p)return;S.tileImg=img;upload("tile",img,true);S.tileReady=true;render();};

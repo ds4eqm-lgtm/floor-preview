@@ -12,7 +12,8 @@ https://ds4eqm-lgtm.github.io/floor-preview/?item=제품코드
 파일 구성
 index.html  화면과 기능 전체
 products.js  제품 목록 (이름, 코드, 이미지, 실제 크기 mm, 시공 방식, 판매 주소)
-tiles  제품 이미지 폴더
+tiles  제품 이미지 폴더 (타일 실물 크기로 깔리는 원본)
+thumbs  색상 고르기 칸에 보이는 작은 이미지
 sample  처음 열 때 보이는 예시 방 사진
 
 제품 이미지 조건
