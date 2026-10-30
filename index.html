@@ -200,7 +200,8 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.10.30e"></script>
+<script src="products.js?v=2026.10.30g"></script>
+<script src="refine.js?v=2026.10.30g"></script>
 <script>
 (function(){
 "use strict";
@@ -211,9 +212,12 @@ const params=new URLSearchParams(location.search);
 const MAX_SIDE=1600;
 const MODELS=["Xenova/segformer-b1-finetuned-ade-512-512","Xenova/segformer-b0-finetuned-ade-512-512"];
 const TF_URL="https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2";
-const FLOORISH=new Set(["floor","flooring","rug","carpet","carpeting","mat"]);
+/* 러그는 바닥이 아니라 바닥 위 물건으로 봄 (새 바닥을 깔아도 러그는 그대로 남게) */
+const FLOORISH=new Set(["floor","flooring"]);
+/* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
+const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.10.30e";
+const VERSION="2026.10.30g";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -261,7 +265,7 @@ void main(){
   vec2 uv=vUv;
   vec3 photo=texture(uPhoto,uv).rgb;
   float m=0.;
-  for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++)m+=texture(uMask,uv+vec2(float(i),float(j))*uMaskTexel*1.6).r;
+  for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++)m+=texture(uMask,uv+vec2(float(i),float(j))*uMaskTexel).r;
   m/=9.;
   vec3 col=photo;
   vec3 hp=vec3(uv*uSize,1.);
@@ -402,25 +406,30 @@ function boxBlur(a,w,h,r){
   for(let y=0;y<h;y++){for(let x=0;x<w;x++){let s=0,n=0;for(let k=-r;k<=r;k++){const yy=y+k;if(yy>=0&&yy<h){s+=t[yy*w+x];n++;}}o[y*w+x]=s/n;}}
   return o;
 }
-/* 원래 사진의 빛과 그림자만 뽑아서 새 바닥에 입히기 (바닥 무늬는 흐려서 지움) */
+/* 원래 사진의 빛과 그림자만 뽑아서 새 바닥에 입히기 (바닥 무늬는 흐려서 지움)
+   경계에 걸친 칸은 문틀, 벽 색이 섞여서 얼룩이 생기므로 바닥 안쪽 칸만 쓰고, 너무 밝거나 어두운 값은 눌러줌 */
 function computeShade(){
   const sw=Math.max(24,Math.round(S.W/14)),shh=Math.max(24,Math.round(S.H*sw/S.W));
   const pd=shrink(S.photoCanvas,sw,shh),md=shrink(S.maskCanvas,sw,shh);
-  const n=sw*shh,L=new Float32Array(n),M=new Float32Array(n),LM=new Float32Array(n);
-  let sL=0,sM=0;
+  const n=sw*shh,L=new Float32Array(n),M=new Float32Array(n),vals=[];
   for(let i=0;i<n;i++){
     const r=pd[i*4]/255,g=pd[i*4+1]/255,b=pd[i*4+2]/255;
-    const l=Math.pow(.2126*r*r+.7152*g*g+.0722*b*b,.5);
-    const m=md[i*4]/255;L[i]=l;M[i]=m;LM[i]=l*m;sL+=l*m;sM+=m;
+    L[i]=Math.pow(.2126*r*r+.7152*g*g+.0722*b*b,.5);
+    if(md[i*4]>247){M[i]=1;vals.push(L[i]);}
   }
-  const mean=sM>1?sL/sM:.5;
+  if(vals.length<8)for(let i=0;i<n;i++)if(md[i*4]>127&&!M[i]){M[i]=1;vals.push(L[i]);}
+  vals.sort((a,b)=>a-b);
+  const med=vals.length?Math.max(.02,vals[vals.length>>1]):.5;
+  const LM=new Float32Array(n);
+  for(let i=0;i<n;i++)LM[i]=Math.max(med*.45,Math.min(med*1.7,L[i]))*M[i];
   let bLM=boxBlur(LM,sw,shh,2),bM=boxBlur(M,sw,shh,2);
-  bLM=boxBlur(bLM,sw,shh,1);bM=boxBlur(bM,sw,shh,1);
+  bLM=boxBlur(bLM,sw,shh,2);bM=boxBlur(bM,sw,shh,2);
   const c=document.createElement("canvas");c.width=sw;c.height=shh;
   const x=c.getContext("2d"),id=x.createImageData(sw,shh);
   for(let i=0;i<n;i++){
-    let s=bM[i]>.04?(bLM[i]/bM[i])/mean:1;
-    s=Math.max(.35,Math.min(1.7,s));
+    let s=bM[i]>.02?(bLM[i]/bM[i])/med:1;
+    if(s>1)s=1+(s-1)*.5;
+    s=Math.max(.55,Math.min(1.2,s));
     const v=Math.round(s/2*255);
     id.data[i*4]=v;id.data[i*4+1]=v;id.data[i*4+2]=v;id.data[i*4+3]=255;
   }
@@ -440,11 +449,12 @@ function estimatePitch(){
 }
 
 /* ---------- 바닥 자동 인식 ---------- */
-let segP=null,segName="";
+let segP=null,segName="",TFMOD=null;
 function ensureModel(){
   if(segP)return segP;
   segP=(async()=>{
     const tf=await import(TF_URL);
+    TFMOD=tf;
     tf.env.allowLocalModels=false;
     const files={};
     const cb=e=>{
@@ -462,36 +472,152 @@ function ensureModel(){
   segP.catch(()=>{segP=null;});
   return segP;
 }
+/* AI에 넣는 크기: 사진 비율 그대로, 짧은 변 512 */
+function modelSize(short){
+  const cap=Math.round(short*1.6/32)*32;
+  if(S.W<=S.H)return [short,Math.min(cap,Math.max(short,Math.round(short*S.H/S.W/32)*32))];
+  return [Math.min(cap,Math.max(short,Math.round(short*S.W/S.H/32)*32)),short];
+}
+function floorIds(model){
+  const id2=(model&&model.config&&model.config.id2label)||{};
+  return Object.keys(id2).filter(k=>String(id2[k]).toLowerCase().split(/[^a-z]+/).some(w=>FLOORISH.has(w))).map(Number);
+}
+function openIds(model){
+  const id2=(model&&model.config&&model.config.id2label)||{};
+  return Object.keys(id2).filter(k=>OPENING.has(String(id2[k]).trim().toLowerCase())).map(Number);
+}
+/* AI 한 번 돌려서 칸마다 바닥일 확률 구하기 */
+async function runModel(seg,mw,mh,flip,ids,oids){
+  const ip=(seg.processor&&seg.processor.image_processor)||{};
+  const mean=ip.image_mean||[0.485,0.456,0.406],std=ip.image_std||[0.229,0.224,0.225],rs=ip.rescale_factor||1/255;
+  const c=document.createElement("canvas");c.width=mw;c.height=mh;
+  const x=c.getContext("2d",{willReadFrequently:true});x.imageSmoothingQuality="high";
+  if(flip){x.translate(mw,0);x.scale(-1,1);}
+  x.drawImage(S.photoCanvas,0,0,mw,mh);
+  const d=x.getImageData(0,0,mw,mh).data,n=mw*mh,arr=new Float32Array(3*n);
+  for(let i=0;i<n;i++){
+    arr[i]=(d[i*4]*rs-mean[0])/std[0];
+    arr[n+i]=(d[i*4+1]*rs-mean[1])/std[1];
+    arr[2*n+i]=(d[i*4+2]*rs-mean[2])/std[2];
+  }
+  const input=new TFMOD.Tensor("float32",arr,[1,3,mh,mw]);
+  const out=await seg.model({pixel_values:input});
+  const lg=out.logits,C=lg.dims[1],lh=lg.dims[2],lw=lg.dims[3],L=lg.data,hw=lh*lw;
+  const p=new Float32Array(hw),o=new Float32Array(hw);
+  for(let k=0;k<hw;k++){
+    let mx=-Infinity;for(let j=0;j<C;j++){const v=L[j*hw+k];if(v>mx)mx=v;}
+    let s=0;for(let j=0;j<C;j++)s+=Math.exp(L[j*hw+k]-mx);
+    let f=0;for(const id of ids)f+=Math.exp(L[id*hw+k]-mx);
+    let g=0;for(const id of oids)g+=Math.exp(L[id*hw+k]-mx);
+    p[k]=f/s;o[k]=g/s;
+  }
+  if(flip)for(const a of [p,o])for(let yy=0;yy<lh;yy++){const r=yy*lw;for(let xx=0;xx<(lw>>1);xx++){const i=r+xx,j=r+lw-1-xx,t=a[i];a[i]=a[j];a[j]=t;}}
+  try{if(input.dispose)input.dispose();if(lg.dispose)lg.dispose();}catch(e){}
+  return {p,o,w:lw,h:lh};
+}
+/* AI 파일이 받는 입력 크기가 정해져 있으면 그 크기를 알려줌 (정해진 크기와 다르게 한 번이라도 넣으면 그 뒤로 계속 고장 남) */
+function fixedInput(seg){
+  try{
+    const ss=seg.model.sessions||{},s=ss.model||Object.values(ss)[0],md=s&&s.inputMetadata;
+    const m=md&&(Array.isArray(md)?md.find(x=>x&&x.name==="pixel_values"):md.pixel_values);
+    const sh=m&&m.shape;
+    if(sh&&sh.length===4&&typeof sh[2]==="number"&&typeof sh[3]==="number"&&sh[2]>0&&sh[3]>0)return [sh[3],sh[2]];
+  }catch(e){}
+  return null;
+}
+/* 실패한 AI는 버리고 새로 띄움 (파일은 브라우저에 저장돼 있어서 금방 뜸) */
+async function freshModel(seg){
+  try{if(seg&&seg.dispose)await seg.dispose();}catch(e){}
+  segP=null;
+  return ensureModel();
+}
+async function floorPrior(seg){
+  const ids=floorIds(seg.model),oids=openIds(seg.model);
+  if(!ids.length)throw new Error("floor label missing");
+  const fixed=fixedInput(seg);
+  const sizes=fixed?[fixed]:[modelSize(512),[512,512]];
+  let last;
+  for(const [mw,mh] of sizes){
+    try{
+      const t0=performance.now();
+      const a=await runModel(seg,mw,mh,false,ids,oids);
+      const ms=performance.now()-t0;let tta=false;
+      if(ms<2500&&params.get("tta")!=="0"){
+        const b=await runModel(seg,mw,mh,true,ids,oids);
+        if(b.w===a.w&&b.h===a.h){for(let i=0;i<a.p.length;i++){a.p[i]=(a.p[i]+b.p[i])/2;a.o[i]=(a.o[i]+b.o[i])/2;}tta=true;}
+      }
+      return {p:a.p,o:oids.length?a.o:null,w:a.w,h:a.h,info:"AI "+mw+"x"+mh+(tta?" 좌우평균":"")+" "+Math.round(ms)+"ms"};
+    }catch(e){last=e;console.warn("floor prior failed at",mw,mh,e);seg=await freshModel(seg);}
+  }
+  const err=last instanceof Error?last:new Error(String(last));
+  err.seg=seg;
+  throw err;
+}
+/* 위 방법이 안 될 때만 쓰는 예전 방식 */
+async function floorPriorPipeline(seg){
+  const k=Math.min(1,768/Math.max(S.W,S.H));
+  const c=document.createElement("canvas");c.width=Math.round(S.W*k);c.height=Math.round(S.H*k);
+  c.getContext("2d").drawImage(S.photoCanvas,0,0,c.width,c.height);
+  const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.92));
+  const url=URL.createObjectURL(blob);
+  const t=Math.min(1,320/Math.max(c.width,c.height)),tw=Math.round(c.width*t),th=Math.round(c.height*t);
+  let out;try{out=await seg(url,{target_sizes:[[th,tw]]});}finally{URL.revokeObjectURL(url);}
+  const p=new Float32Array(tw*th);
+  for(const s of out){
+    const words=String(s.label||"").toLowerCase().split(/[^a-z]+/);
+    if(!words.some(w=>FLOORISH.has(w)))continue;
+    const m=s.mask,ch=m.channels||1,d=m.data,sx=m.width/tw,sy=m.height/th;
+    for(let y=0;y<th;y++)for(let x=0;x<tw;x++)if(d[(Math.floor(y*sy)*m.width+Math.floor(x*sx))*ch]>127)p[y*tw+x]=1;
+  }
+  return {p,o:null,w:tw,h:th,info:"기본 방식"};
+}
+function upsample(p,pw,ph,W,H){
+  const out=new Float32Array(W*H);
+  for(let y=0;y<H;y++){
+    const sy=Math.max(0,Math.min(ph-1,(y+.5)*ph/H-.5)),y0=Math.floor(sy),y1=Math.min(ph-1,y0+1),fy=sy-y0;
+    for(let x=0;x<W;x++){
+      const sx=Math.max(0,Math.min(pw-1,(x+.5)*pw/W-.5)),x0=Math.floor(sx),x1=Math.min(pw-1,x0+1),fx=sx-x0;
+      out[y*W+x]=(p[y0*pw+x0]*(1-fx)+p[y0*pw+x1]*fx)*(1-fy)+(p[y1*pw+x0]*(1-fx)+p[y1*pw+x1]*fx)*fy;
+    }
+  }
+  return out;
+}
 async function detectFloor(){
   S.aiBusy=true;chip("바닥 찾는 중이에요","busy");
   try{
     const seg=await ensureModel();
     chip("바닥 찾는 중이에요","busy");
     await new Promise(r=>setTimeout(r,30));
-    const k=Math.min(1,768/Math.max(S.W,S.H));
-    const c=document.createElement("canvas");c.width=Math.round(S.W*k);c.height=Math.round(S.H*k);
-    c.getContext("2d").drawImage(S.photoCanvas,0,0,c.width,c.height);
-    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.92));
-    const url=URL.createObjectURL(blob);
-    const t=Math.min(1,320/Math.max(c.width,c.height)),tw=Math.round(c.width*t),th=Math.round(c.height*t);
-    let out;try{out=await seg(url,{target_sizes:[[th,tw]]});}finally{URL.revokeObjectURL(url);}
-    const mc=document.createElement("canvas");mc.width=tw;mc.height=th;
-    const mx=mc.getContext("2d"),id=mx.createImageData(mc.width,mc.height);
-    let hit=0;
-    for(const s of out){
-      const words=String(s.label||"").toLowerCase().split(/[^a-z]+/);
-      if(!words.some(w=>FLOORISH.has(w)))continue;
-      const m=s.mask,ch=m.channels||1,d=m.data;
-      const sx=m.width/mc.width,sy=m.height/mc.height;
-      for(let y=0;y<mc.height;y++)for(let x=0;x<mc.width;x++){
-        const v=d[(Math.floor(y*sy)*m.width+Math.floor(x*sx))*ch];
-        if(v>127){const i=(y*mc.width+x)*4;if(!id.data[i]){hit++;}id.data[i]=id.data[i+1]=id.data[i+2]=255;}
-      }
+    let pr;
+    try{pr=await floorPrior(seg);}
+    catch(e){console.warn("fallback to pipeline",e);pr=await floorPriorPipeline(e&&e.seg?e.seg:await freshModel(seg));}
+    chip("바닥 경계 다듬는 중이에요","busy");
+    await new Promise(r=>setTimeout(r,30));
+    const k=Math.min(1,800/Math.max(S.W,S.H)),ww=Math.max(8,Math.round(S.W*k)),wh=Math.max(8,Math.round(S.H*k));
+    const c=document.createElement("canvas");c.width=ww;c.height=wh;
+    const x=c.getContext("2d",{willReadFrequently:true});x.imageSmoothingQuality="high";
+    x.drawImage(S.photoCanvas,0,0,ww,wh);
+    const img=x.getImageData(0,0,ww,wh);
+    const prior=upsample(pr.p,pr.w,pr.h,ww,wh);
+    const open=pr.o?upsample(pr.o,pr.w,pr.h,ww,wh):null;
+    let soft=prior,note="";
+    if(window.FloorRefine&&params.get("refine")!=="0"){
+      try{
+        const t1=performance.now(),r=window.FloorRefine.refine(img.data,ww,wh,prior,{open});
+        soft=r.soft;note=" · 다듬기 "+Math.round(performance.now()-t1)+"ms"+(r.patterned?" 무늬":"");
+      }catch(e){console.error("refine failed",e);note=" · 다듬기 실패";}
     }
-    for(let i=3;i<id.data.length;i+=4)id.data[i]=255;
-    mx.putImageData(id,0,0);
-    if(hit<mc.width*mc.height*.03){fallbackMask();applyAuto();chip("바닥을 잘 못 찾았어요. 바닥 고치기로 칠해 주세요","warn");}
-    else{setMask(mc);applyAuto();chip("다른 색상도 눌러 보세요","");}
+    let area=0;
+    const od=x.createImageData(ww,wh);
+    for(let i=0;i<soft.length;i++){
+      const v=Math.round(Math.max(0,Math.min(1,soft[i]))*255);
+      od.data[i*4]=od.data[i*4+1]=od.data[i*4+2]=v;od.data[i*4+3]=255;if(v>127)area++;
+    }
+    x.putImageData(od,0,0);
+    S.aiInfo=pr.info+note;
+    if(params.get("debug")==="1")$("gpuNote").textContent="버전 "+VERSION+" · "+S.aiInfo;
+    if(area<soft.length*.03){fallbackMask();applyAuto();chip("바닥을 잘 못 찾았어요. 바닥 고치기로 칠해 주세요","warn");}
+    else{setMask(c);applyAuto();chip("다른 색상도 눌러 보세요","");}
   }catch(e){
     console.error(e);fallbackMask();applyAuto();
     chip("자동 인식이 안 됐어요. 바닥 고치기로 범위를 칠해 주세요","warn");
@@ -742,6 +868,7 @@ async function start(){
   }
 }
 window.__sim={S,setMask:src=>{setMask(src);applyAuto();},render,draw,selectProduct,homography};
+if(params.get("debug")==="1")window.__sim.dbg={ensureModel,floorPrior,floorPriorPipeline,upsample,modelSize};
 start();
 })();
 </script>

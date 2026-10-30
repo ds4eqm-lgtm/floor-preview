@@ -11,6 +11,7 @@ https://ds4eqm-lgtm.github.io/floor-preview/?item=제품코드
 
 파일 구성
 index.html  화면과 기능 전체
+refine.js  AI가 찾은 바닥 경계를 사진의 벽, 문틀, 걸레받이 선에 맞춰 다듬고 창문 너머 바닥은 빼는 기능
 products.js  제품 목록 (이름, 코드, 이미지, 실제 크기 mm, 시공 방식, 판매 주소)
 tiles  제품 이미지 폴더 (타일 실물 크기로 깔리는 원본)
 thumbs  색상 고르기 칸에 보이는 작은 이미지
