@@ -200,8 +200,9 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.10.30g"></script>
-<script src="refine.js?v=2026.10.30g"></script>
+<script src="products.js?v=2026.11.02a"></script>
+<script src="refine.js?v=2026.11.02a"></script>
+<script src="orient.js?v=2026.11.02a"></script>
 <script>
 (function(){
 "use strict";
@@ -217,7 +218,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.10.30g";
+const VERSION="2026.11.02a";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -231,7 +232,7 @@ window.addEventListener("error",e=>{
 const S={
   W:0,H:0,photoCanvas:null,maskCanvas:null,maskCtx:null,
   product:null,tileReady:false,
-  pitch:24,autoPitch:24,roll:0,fov:0,scale:1,rot:90,shade:.85,
+  pitch:24,autoPitch:24,roll:0,autoRoll:0,fov:0,scale:1,rot:90,autoRot:90,rotStep:0,shade:.85,
   split:-1,compare:false,brush:false,brushAdd:true,brushSize:60,adjust:false,
   undo:[],aiBusy:false
 };
@@ -281,16 +282,15 @@ void main(){
     vec2 cf=vec2(P.x+off,P.y)/sz;
     vec2 cell=floor(cf);
     vec2 lc=cf-cell;
-    float r1=h2(cell+vec2(0.,row*.37)),r2=h2(cell*1.7+5.3);
+    float r1=h2(cell+vec2(0.,row*.37));
     vec2 tuv=r1>.5?1.-lc:lc;
     vec3 t=textureGrad(uTile,tuv,dFdx(cf),dFdy(cf)).rgb;
-    t*=1.+(r2-.5)*.07;
     vec2 dmm=min(lc,1.-lc)*sz;
     float fw=max(length(dFdx(P)),length(dFdy(P)));
     float d=min(dmm.x,dmm.y);
-    float jw=.6;
+    float jw=.9;
     float jl=1.-smoothstep(jw-fw*.6,jw+fw*.6,d);
-    t*=1.-jl*clamp(1.-fw/8.,0.,1.)*.32;
+    t*=1.-jl*clamp(1.-fw/10.,0.,1.)*.42;
     float sh=texture(uShade,uv).r*2.;
     t*=mix(1.,sh,uShadeAmt);
     col=mix(photo,t,m);
@@ -623,9 +623,36 @@ async function detectFloor(){
     chip("자동 인식이 안 됐어요. 바닥 고치기로 범위를 칠해 주세요","warn");
   }finally{S.aiBusy=false;}
 }
+/* 바닥 경계선과 원래 바닥 줄눈으로 방의 가로세로 방향, 카메라 기울기 찾기 */
+function orientFloor(p0){
+  const out={pitch:p0,roll:0,rot:90,info:""};
+  if(!window.FloorOrient||!S.W)return out;
+  try{
+    const k=Math.min(1,480/Math.max(S.W,S.H)),w=Math.max(8,Math.round(S.W*k)),h=Math.max(8,Math.round(S.H*k));
+    const pd=shrink(S.photoCanvas,w,h),md=shrink(S.maskCanvas,w,h),n=w*h;
+    const lum=new Float32Array(n),mask=new Float32Array(n);
+    for(let i=0;i<n;i++){lum[i]=(.2126*pd[i*4]+.7152*pd[i*4+1]+.0722*pd[i*4+2])/255;mask[i]=md[i*4]/255;}
+    const t0=performance.now();
+    const r=window.FloorOrient.estimate({mask,lum,w,h,W:S.W,H:S.H,pitch0:p0,fovAdj:0});
+    out.pitch=r.pitch;out.roll=r.roll;
+    if(r.beta!=null){
+      /* 같은 방향 후보 둘 중 앞으로 뻗는 쪽(90도에 가까운 쪽)을 기본으로: 마루는 앞으로 뻗게 깔림 */
+      const a=r.beta,b=r.beta+90;
+      out.rot=Math.abs(a-90)<=Math.abs(b-90)?a:b;
+    }
+    out.info="방향 "+(r.beta==null?"못 찾음":r.beta.toFixed(1)+"도")+" 기울기 "+p0.toFixed(1)+"→"+r.pitch.toFixed(1)+" 점수 "+r.score.toFixed(3)+" "+Math.round(performance.now()-t0)+"ms";
+  }catch(e){console.error("orient failed",e);}
+  return out;
+}
 function applyAuto(){
-  const p=estimatePitch();S.autoPitch=p==null?35:p;S.pitch=S.autoPitch;S.roll=0;S.fov=0;S.scale=1;
-  syncAdjust();computeShade();render();
+  const p=estimatePitch(),p0=p==null?35:p;
+  computeShade();
+  const o=orientFloor(p0);
+  S.autoPitch=o.pitch;S.autoRoll=o.roll;S.autoRot=o.rot;S.rotStep=0;
+  S.pitch=S.autoPitch;S.roll=S.autoRoll;S.rot=S.autoRot;S.fov=0;S.scale=1;
+  S.orientInfo=o.info;
+  if(params.get("debug")==="1")$("gpuNote").textContent="버전 "+VERSION+" · "+(S.aiInfo||"")+" · "+o.info;
+  syncAdjust();render();
 }
 
 /* ---------- 제품 ---------- */
@@ -643,6 +670,39 @@ function buildSwatches(){
   });
 }
 const tileCache={};
+/* 제품 사진에 들어 있는 큰 밝기 기울기(조명, 비네팅)를 펴서, 타일마다 같은 그림자가 반복돼 보이지 않게 함
+   무늬는 그대로 두고 아주 완만한 밝기 변화(2차 곡면)만 빼냄 */
+function flattenTile(img){
+  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+  const k=Math.min(1,1024/Math.max(iw,ih)),w=Math.max(2,Math.round(iw*k)),h=Math.max(2,Math.round(ih*k));
+  const c=document.createElement("canvas");c.width=w;c.height=h;
+  const x=c.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0,w,h);
+  const id=x.getImageData(0,0,w,h),d=id.data,n=w*h;
+  const lin=new Float32Array(256);for(let i=0;i<256;i++)lin[i]=Math.pow(i/255,2.2);
+  const G=24,gs=new Float64Array(G*G),gc=new Float64Array(G*G);
+  for(let y=0;y<h;y++){const gy=Math.min(G-1,(y*G/h)|0);for(let xx=0;xx<w;xx++){const i=(y*w+xx)*4,gx=Math.min(G-1,(xx*G/w)|0);
+    gs[gy*G+gx]+=.2126*lin[d[i]]+.7152*lin[d[i+1]]+.0722*lin[d[i+2]];gc[gy*G+gx]++;}}
+  /* 2차 곡면 맞추기 (최소제곱) */
+  const M=new Float64Array(36),bv=new Float64Array(6);let mean=0,cnt=0;
+  for(let gy=0;gy<G;gy++)for(let gx=0;gx<G;gx++){const j=gy*G+gx;if(!gc[j])continue;const v=gs[j]/gc[j];mean+=v;cnt++;
+    const u=(gx+.5)/G-.5,t=(gy+.5)/G-.5,f=[1,u,t,u*u,u*t,t*t];
+    for(let a=0;a<6;a++){bv[a]+=f[a]*v;for(let b=0;b<6;b++)M[a*6+b]+=f[a]*f[b];}}
+  mean/=cnt||1;
+  for(let a=0;a<6;a++){let p=a;for(let r=a+1;r<6;r++)if(Math.abs(M[r*6+a])>Math.abs(M[p*6+a]))p=r;
+    if(p!==a){for(let b=0;b<6;b++){const tt=M[a*6+b];M[a*6+b]=M[p*6+b];M[p*6+b]=tt;}const tt=bv[a];bv[a]=bv[p];bv[p]=tt;}
+    const piv=M[a*6+a];if(Math.abs(piv)<1e-12)return c;
+    for(let r=0;r<6;r++){if(r===a)continue;const fct=M[r*6+a]/piv;if(!fct)continue;for(let b=a;b<6;b++)M[r*6+b]-=fct*M[a*6+b];bv[r]-=fct*bv[a];}}
+  const co=bv.map((v,a)=>v/M[a*6+a]);
+  const out=x.createImageData(w,h),o=out.data;
+  for(let y=0;y<h;y++){const t=(y+.5)/h-.5;for(let xx=0;xx<w;xx++){const u=(xx+.5)/w-.5;
+    const fit=co[0]+co[1]*u+co[2]*t+co[3]*u*u+co[4]*u*t+co[5]*t*t;
+    const g=Math.max(.75,Math.min(1.33,mean/Math.max(1e-4,fit)));
+    const i=(y*w+xx)*4;
+    for(let ch=0;ch<3;ch++)o[i+ch]=Math.max(0,Math.min(255,Math.round(255*Math.pow(Math.min(1,lin[d[i+ch]]*g),1/2.2))));
+    o[i+3]=255;}}
+  x.putImageData(out,0,0);
+  return c;
+}
 function selectProduct(i){
   const p=PRODUCTS[i];if(!p)return;
   S.product=p;
@@ -657,7 +717,7 @@ function selectProduct(i){
   const a=$("pLink");if(p.url){a.href=p.url;a.hidden=false;}else a.hidden=true;
   const done=img=>{if(S.product!==p)return;S.tileImg=img;upload("tile",img,true);S.tileReady=true;render();};
   if(tileCache[p.image])return done(tileCache[p.image]);
-  const img=new Image();img.onload=()=>{tileCache[p.image]=img;done(img);};
+  const img=new Image();img.onload=()=>{let t=img;try{t=flattenTile(img);}catch(e){console.warn("flatten failed",e);}tileCache[p.image]=t;done(t);};
   img.onerror=()=>chip("제품 이미지를 못 불러왔어요: "+p.image,"warn");
   img.src=bust(p.image);
 }
@@ -774,7 +834,8 @@ function setAdjust(on){
 $("tCompare").onclick=()=>setCompare(!S.compare);
 $("tBrush").onclick=()=>setBrush(!S.brush);
 $("tAdjust").onclick=()=>setAdjust(!S.adjust);
-$("tRotate").onclick=()=>{const steps=[90,0,45,135];const i=steps.indexOf(Math.round(S.rot));S.rot=steps[(i+1)%steps.length];syncAdjust();render();};
+/* 방향 버튼: 자동으로 맞춘 방향에서 90도, 대각선 순서로 돌려봄 */
+$("tRotate").onclick=()=>{const steps=[0,90,45,135];S.rotStep=(S.rotStep+1)%steps.length;S.rot=Math.round(((S.autoRot+steps[S.rotStep])%180)*10)/10;syncAdjust();render();};
 $("bAdd").onclick=()=>{S.brushAdd=true;$("bAdd").setAttribute("aria-pressed","true");$("bErase").setAttribute("aria-pressed","false");};
 $("bErase").onclick=()=>{S.brushAdd=false;$("bAdd").setAttribute("aria-pressed","false");$("bErase").setAttribute("aria-pressed","true");};
 $("bSize").oninput=e=>{S.brushSize=+e.target.value;$("bSizeOut").textContent=S.brushSize;};
@@ -782,7 +843,7 @@ $("bSizeOut").textContent=S.brushSize;
 $("bUndo").onclick=()=>{const d=S.undo.pop();if(d){S.maskCtx.putImageData(d,0,0);uploadMask();render();}};
 $("bDone").onclick=()=>setBrush(false);
 $("aDone").onclick=()=>setAdjust(false);
-$("aReset").onclick=()=>{S.pitch=S.autoPitch;S.roll=0;S.fov=0;S.scale=1;S.rot=90;S.shade=.85;syncAdjust();render();};
+$("aReset").onclick=()=>{S.pitch=S.autoPitch;S.roll=S.autoRoll||0;S.fov=0;S.scale=1;S.rot=S.autoRot;S.rotStep=0;S.shade=.85;syncAdjust();render();};
 
 const sliders=[
   ["aPitch",v=>S.pitch=v,()=>S.pitch,v=>v.toFixed(1)+"°"],
