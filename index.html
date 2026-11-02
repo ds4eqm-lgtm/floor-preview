@@ -83,6 +83,22 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 .bar>*{flex:1 1 0}
 .note{font-size:12.5px;color:var(--muted);margin-top:4px}
 .err{color:var(--warn)}
+/* 최근 올린 사진 (이 기기 안에만 저장) */
+.recent{margin-top:6px}
+.recent-head{display:flex;align-items:center;justify-content:space-between;gap:4px 10px;flex-wrap:wrap;margin-bottom:6px}
+.recent-head .label{margin:0}
+.recent-head .sub{font-weight:500;margin-left:6px;letter-spacing:0}
+.linkbtn{background:none;border:0;min-height:32px;padding:4px 2px;font-size:12.5px;font-weight:600;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+.linkbtn.armed{color:var(--warn)}
+.thumbs{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin-inline:-2px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.th{position:relative;flex:0 0 72px;width:72px;height:72px;scroll-snap-align:start}
+.th-open{width:100%;height:100%;padding:0;min-height:0;border-radius:10px;overflow:hidden;border:2px solid transparent;background:var(--line)}
+.th-open img{display:block;width:100%;height:100%;object-fit:cover}
+.th-open[aria-pressed="true"]{border-color:var(--accent);background:var(--line);box-shadow:0 0 0 2px var(--paper) inset}
+.th-del{position:absolute;top:2px;right:2px;width:28px;height:28px;min-height:0;padding:0;border:0;background:none;color:#fff;font-size:13px;font-weight:700;line-height:1}
+.th-del::before{content:"";position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(18,20,19,.62)}
+.th-del span{position:relative}
+@media (hover:hover){.th-del{opacity:.75}.th:hover .th-del{opacity:1}}
 </style>
 </head>
 <body>
@@ -114,6 +130,13 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
         <input id="fileAlbum" class="vh" type="file" accept="image/*,.heic,.heif">
       </div>
       <p class="note">바닥이 넓게 보이도록 서서 앞쪽을 비스듬히 찍어 주세요. 사진은 휴대폰 안에서만 처리되고 어디에도 올라가지 않아요.</p>
+      <div class="recent" id="recent" hidden>
+        <div class="recent-head">
+          <p class="label">최근 올린 사진<span class="sub">이 기기에만 20장까지 저장돼요</span></p>
+          <button class="linkbtn" id="rClear" type="button">모두 지우기</button>
+        </div>
+        <div class="thumbs" id="thumbs" role="list" aria-label="최근 올린 사진"></div>
+      </div>
     </section>
 
     <aside class="side">
@@ -184,6 +207,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
           <label for="aShade">그림자 살리기 <output id="aShadeOut"></output></label>
           <input id="aShade" type="range" min="0" max="100" value="85">
         </div>
+        <div class="row">
+          <label for="aBright">바닥 밝기 <output id="aBrightOut"></output></label>
+          <input id="aBright" type="range" min="50" max="150" value="100">
+        </div>
         <div class="bar">
           <button id="aReset">처음 값으로</button>
           <button id="aDone" class="primary">다 했어요</button>
@@ -200,9 +227,9 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.02b"></script>
-<script src="refine.js?v=2026.11.02b"></script>
-<script src="orient.js?v=2026.11.02b"></script>
+<script src="products.js?v=2026.11.02c"></script>
+<script src="refine.js?v=2026.11.02c"></script>
+<script src="orient.js?v=2026.11.02c"></script>
 <script>
 (function(){
 "use strict";
@@ -218,7 +245,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.02b";
+const VERSION="2026.11.02c";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -232,10 +259,13 @@ window.addEventListener("error",e=>{
 const S={
   W:0,H:0,photoCanvas:null,maskCanvas:null,maskCtx:null,
   product:null,tileReady:false,
-  pitch:24,autoPitch:24,roll:0,autoRoll:0,fov:0,scale:1,rot:90,autoRot:90,rotStep:0,shade:.85,
+  pitch:24,autoPitch:24,roll:0,autoRoll:0,fov:0,scale:1,rot:90,autoRot:90,rotStep:0,shade:.85,bright:1,expo:[1,1,1],noise:0,
   split:-1,compare:false,brush:false,brushAdd:true,brushSize:60,adjust:false,
-  undo:[],aiBusy:false
+  undo:[],aiBusy:false,aiTok:0,
+  /* 사진을 새로 띄울 때마다 1씩 올라가는 번호: 늦게 끝난 예전 작업이 지금 사진을 덮어쓰지 못하게 */
+  loadToken:0,histId:null
 };
+function newLoad(){S.loadToken++;return S.loadToken;}
 
 /* ---------- 상태 표시 ---------- */
 function chip(text,kind){
@@ -254,7 +284,9 @@ in vec2 p;out vec2 vUv;
 void main(){vUv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}`;
 const FS=`#version 300 es
 precision highp float;
-uniform sampler2D uPhoto,uMask,uShade,uTile;
+uniform sampler2D uPhoto,uMask,uShade,uTile,uAO;
+uniform vec3 uExpo;
+uniform float uNoise;
 uniform vec2 uSize,uMaskTexel,uTileMM;
 uniform vec3 uH0,uH1,uH2;
 uniform int uPattern;
@@ -284,16 +316,26 @@ void main(){
     vec2 lc=cf-cell;
     float r1=h2(cell+vec2(0.,row*.37));
     vec2 tuv=r1>.5?1.-lc:lc;
-    vec3 t=textureGrad(uTile,tuv,dFdx(cf),dFdy(cf)).rgb;
+    /* 폰 카메라로 찍은 것처럼 아주 살짝 덜 또렷하게 (제품 원본 사진의 칼같은 선명함은 CG처럼 보임) */
+    vec3 t=textureGrad(uTile,tuv,dFdx(cf)*1.25,dFdy(cf)*1.25).rgb;
     vec2 dmm=min(lc,1.-lc)*sz;
     float fw=max(length(dFdx(P)),length(dFdy(P)));
     float d=min(dmm.x,dmm.y);
     float jw=.5;
     float jl=1.-smoothstep(jw-fw*.6,jw+fw*.6,d);
     t*=1.-jl*clamp(1.-fw/6.,0.,1.)*.14;
+    /* 제품 사진 밝기 그대로가 아니라, 이 방 빛과 사진 노출 아래에서 보일 밝기로 (빛 계산은 선형 밝기에서) */
+    vec3 lin=pow(max(t,vec3(0.)),vec3(2.2));
     float sh=texture(uShade,uv).r*2.;
-    t*=mix(1.,sh,uShadeAmt);
-    col=mix(photo,t,m);
+    float ao=texture(uAO,uv).r;
+    lin*=uExpo*mix(1.,sh*ao,uShadeAmt);
+    vec3 srgb=pow(max(lin,vec3(0.)),vec3(1./2.2));
+    /* 사진과 같은 정도의 자글자글한 노이즈 (매끈한 CG 느낌 없애기) */
+    vec2 fc=gl_FragCoord.xy;
+    float g0=h2(fc*1.013+vec2(3.1,7.7))+h2(fc*.987+vec2(9.3,1.9))-1.;
+    vec3 gc=vec3(h2(fc+vec2(11.,5.)),h2(fc+vec2(2.,19.)),h2(fc+vec2(7.,3.)))-.5;
+    srgb+=uNoise*(vec3(g0*2.45)+gc*.5);
+    col=mix(photo,srgb,m);
     if(uGrid>0.){
       vec2 g=P/600.;
       vec2 gd=abs(fract(g-.5)-.5)/max(fwidth(g),vec2(1e-5));
@@ -315,12 +357,15 @@ function initGL(){
   const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   const loc=gl.getAttribLocation(prog,"p");gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-  ["uPhoto","uMask","uShade","uTile","uSize","uMaskTexel","uTileMM","uH0","uH1","uH2","uPattern","uRot","uShadeAmt","uSplit","uMaskView","uGrid","uHasTile"].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
-  ["photo","mask","shade","tile"].forEach((n,i)=>{TEX[n]=gl.createTexture();gl.uniform1i(U["u"+n[0].toUpperCase()+n.slice(1)],i);});
+  ["uPhoto","uMask","uShade","uTile","uAO","uExpo","uNoise","uSize","uMaskTexel","uTileMM","uH0","uH1","uH2","uPattern","uRot","uShadeAmt","uSplit","uMaskView","uGrid","uHasTile"].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
+  TEXN.forEach((n,i)=>{TEX[n]=gl.createTexture();gl.uniform1i(U[n==="ao"?"uAO":"u"+n[0].toUpperCase()+n.slice(1)],i);});
+  const one=document.createElement("canvas");one.width=one.height=1;const ox=one.getContext("2d");ox.fillStyle="#fff";ox.fillRect(0,0,1,1);
+  upload("ao",one,false);
   const an=gl.getExtension("EXT_texture_filter_anisotropic");TEX.aniso=an;
 }
+const TEXN=["photo","mask","shade","tile","ao"];
 function upload(name,src,mip){
-  const unit=["photo","mask","shade","tile"].indexOf(name);
+  const unit=TEXN.indexOf(name);
   gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,TEX[name]);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
@@ -361,6 +406,9 @@ function draw(){
   gl.uniform1i(U.uPattern,p.pattern==="stagger"?1:p.pattern==="half"?2:0);
   gl.uniform1f(U.uRot,S.rot*Math.PI/180);
   gl.uniform1f(U.uShadeAmt,S.shade);
+  const ex=S.expo||[1,1,1],bk=S.bright||1;
+  gl.uniform3f(U.uExpo,ex[0]*bk,ex[1]*bk,ex[2]*bk);
+  gl.uniform1f(U.uNoise,S.noise||0);
   gl.uniform1f(U.uSplit,S.compare?S.split:-1);
   gl.uniform1f(U.uMaskView,S.brush?1:0);
   gl.uniform1f(U.uGrid,S.adjust?1:0);
@@ -369,17 +417,18 @@ function draw(){
 }
 
 /* ---------- 사진, 바닥 범위, 그림자 ---------- */
-function setPhoto(img){
+function setPhoto(img,skipLight){
   let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
   const k=Math.min(1,MAX_SIDE/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
   const c=document.createElement("canvas");c.width=w;c.height=h;
-  const x=c.getContext("2d");x.imageSmoothingQuality="high";x.drawImage(img,0,0,w,h);
-  S.photoCanvas=c;S.W=w;S.H=h;view.width=w;view.height=h;
+  /* 사진 캔버스는 CPU 쪽에 둠: 밝기, 바닥 찾기에서 여러 번 읽는데 그래픽 칩에서 매번 꺼내 오면 느림 */
+  const x=c.getContext("2d",{willReadFrequently:true});x.imageSmoothingQuality="high";x.drawImage(img,0,0,w,h);
+  S.photoCanvas=c;S.photoPx=null;S.W=w;S.H=h;view.width=w;view.height=h;
   S.maskCanvas=document.createElement("canvas");S.maskCanvas.width=w;S.maskCanvas.height=h;
   S.maskCtx=S.maskCanvas.getContext("2d",{willReadFrequently:true});
   S.maskCtx.fillStyle="#000";S.maskCtx.fillRect(0,0,w,h);
   S.undo=[];
-  upload("photo",c,false);uploadMask();computeShade();
+  upload("photo",c,false);uploadMask();if(!skipLight)computeLighting();
   if(S.compare)updateSplitUI();
   render();
 }
@@ -396,7 +445,7 @@ function fallbackMask(){
 function shrink(src,w,h){
   let c=src,cw=src.width,ch=src.height;
   while(cw/2>w){const n=document.createElement("canvas");n.width=Math.round(cw/2);n.height=Math.round(ch/2);
-    n.getContext("2d").drawImage(c,0,0,n.width,n.height);c=n;cw=n.width;ch=n.height;}
+    n.getContext("2d",{willReadFrequently:true}).drawImage(c,0,0,n.width,n.height);c=n;cw=n.width;ch=n.height;}
   const n=document.createElement("canvas");n.width=w;n.height=h;
   const x=n.getContext("2d",{willReadFrequently:true});x.imageSmoothingQuality="high";x.drawImage(c,0,0,w,h);return x.getImageData(0,0,w,h).data;
 }
@@ -406,34 +455,112 @@ function boxBlur(a,w,h,r){
   for(let y=0;y<h;y++){for(let x=0;x<w;x++){let s=0,n=0;for(let k=-r;k<=r;k++){const yy=y+k;if(yy>=0&&yy<h){s+=t[yy*w+x];n++;}}o[y*w+x]=s/n;}}
   return o;
 }
-/* 원래 사진의 빛과 그림자만 뽑아서 새 바닥에 입히기 (바닥 무늬는 흐려서 지움)
-   경계에 걸친 칸은 문틀, 벽 색이 섞여서 얼룩이 생기므로 바닥 안쪽 칸만 쓰고, 너무 밝거나 어두운 값은 눌러줌 */
-function computeShade(){
+const LIN=new Float32Array(256);for(let i=0;i<256;i++)LIN[i]=Math.pow(i/255,2.2);
+/* 빛 처리: 실제로 찍은 사진처럼 보이게
+   1 원래 바닥에 찍힌 밝기 흐름(창가 밝음, 구석 어두움)을 선형 밝기 비율로 뽑아 바닥 전체에 입힘
+   2 사진 노출은 벽, 천장처럼 밝고 무채색인 면을 흰색 기준으로 삼아 맞춤 (흰 벽보다 흰 타일이 더 밝게 뜨지 않게)
+   3 조명 색(노란 전등, 흰 형광등)을 벽 색에서 읽어 타일에 살짝 입힘
+   4 사진 자체의 자글자글한 노이즈 정도를 재서 타일에도 똑같이
+   5 벽 밑, 가구 밑, 문짝 밑에 닿는 곳은 살짝 어둡게 (접지 그림자) */
+function computeLighting(){
   const sw=Math.max(24,Math.round(S.W/14)),shh=Math.max(24,Math.round(S.H*sw/S.W));
   const pd=shrink(S.photoCanvas,sw,shh),md=shrink(S.maskCanvas,sw,shh);
   const n=sw*shh,L=new Float32Array(n),M=new Float32Array(n),vals=[];
   for(let i=0;i<n;i++){
-    const r=pd[i*4]/255,g=pd[i*4+1]/255,b=pd[i*4+2]/255;
-    L[i]=Math.pow(.2126*r*r+.7152*g*g+.0722*b*b,.5);
+    L[i]=.2126*LIN[pd[i*4]]+.7152*LIN[pd[i*4+1]]+.0722*LIN[pd[i*4+2]];
     if(md[i*4]>247){M[i]=1;vals.push(L[i]);}
   }
   if(vals.length<8)for(let i=0;i<n;i++)if(md[i*4]>127&&!M[i]){M[i]=1;vals.push(L[i]);}
   vals.sort((a,b)=>a-b);
-  const med=vals.length?Math.max(.02,vals[vals.length>>1]):.5;
+  const floorMed=vals.length?Math.max(.003,vals[vals.length>>1]):0,med=floorMed||.2;
   const LM=new Float32Array(n);
-  for(let i=0;i<n;i++)LM[i]=Math.max(med*.45,Math.min(med*1.7,L[i]))*M[i];
+  for(let i=0;i<n;i++)LM[i]=Math.max(med*.25,Math.min(med*2.5,L[i]))*M[i];
   let bLM=boxBlur(LM,sw,shh,2),bM=boxBlur(M,sw,shh,2);
   bLM=boxBlur(bLM,sw,shh,2);bM=boxBlur(bM,sw,shh,2);
   const c=document.createElement("canvas");c.width=sw;c.height=shh;
   const x=c.getContext("2d"),id=x.createImageData(sw,shh);
   for(let i=0;i<n;i++){
     let s=bM[i]>.02?(bLM[i]/bM[i])/med:1;
-    if(s>1)s=1+(s-1)*.5;
-    s=Math.max(.55,Math.min(1.2,s));
+    if(s>1)s=1+(s-1)*.45;
+    s=Math.max(.3,Math.min(1.4,s));
     const v=Math.round(s/2*255);
     id.data[i*4]=v;id.data[i*4+1]=v;id.data[i*4+2]=v;id.data[i*4+3]=255;
   }
   x.putImageData(id,0,0);S.shadeCanvas=c;upload("shade",c,false);
+  /* 노출과 조명 색 */
+  const k=Math.min(1,256/Math.max(S.W,S.H)),rw=Math.max(8,Math.round(S.W*k)),rh=Math.max(8,Math.round(S.H*k));
+  const rp=shrink(S.photoCanvas,rw,rh),rm=shrink(S.maskCanvas,rw,rh),refs=[];
+  for(let i=0;i<rw*rh;i++){
+    if(rm[i*4]>25)continue;
+    const r=rp[i*4]/255,g=rp[i*4+1]/255,b=rp[i*4+2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+    if(mx>.97||mx<.15||(mx-mn)/mx>.3)continue;
+    refs.push([.2126*LIN[rp[i*4]]+.7152*LIN[rp[i*4+1]]+.0722*LIN[rp[i*4+2]],LIN[rp[i*4]],LIN[rp[i*4+1]],LIN[rp[i*4+2]]]);
+  }
+  let expo=1,cast=[1,1,1],how="기본";
+  if(refs.length>=60){
+    refs.sort((a,b)=>a[0]-b[0]);
+    /* 벽 밝기 분포의 80퍼센트 지점을 흰 벽(반사율 0.8)으로 보고, 바닥은 그보다 조금 덜 받는 빛(0.85배)으로 맞춤 */
+    const dbg=params.get("debug")==="1";
+    const qp=dbg&&params.get("lq")?+params.get("lq"):.8,kf=dbg&&params.get("lk")?+params.get("lk"):.85;
+    const Lw=refs[Math.min(refs.length-1,Math.floor(refs.length*qp))][0];
+    expo=Lw/.8*kf;how="벽 기준";
+    let sr=0,sg=0,sb=0,sl=0;
+    for(let j=Math.floor(refs.length*.55);j<refs.length;j++){sr+=refs[j][1];sg+=refs[j][2];sb+=refs[j][3];sl+=refs[j][0];}
+    if(sl>0){
+      const cc=[sr/sl,sg/sl,sb/sl],sat=Math.max(...cc)-Math.min(...cc);
+      const st=.55*(1-Math.min(1,Math.max(0,(sat-.08)/.2)));
+      cast=cc.map(v=>Math.max(.88,Math.min(1.12,1+(v-1)*st)));
+    }
+  }else if(floorMed){expo=floorMed/.3;how="바닥 기준";}
+  /* 원래 바닥이 아주 밝은 색(반사율 0.75)부터 아주 어두운 색(0.06) 사이라는 점으로 노출 범위를 묶음 */
+  if(floorMed)expo=Math.max(floorMed/.75,Math.min(floorMed/.06,expo));
+  expo=Math.max(.15,Math.min(1.25,expo));
+  const cl=.2126*cast[0]+.7152*cast[1]+.0722*cast[2];
+  S.expo=cast.map(v=>v/cl*expo);
+  S.noise=estimateNoise();
+  S.aoCanvas=computeAO();upload("ao",S.aoCanvas,false);
+  S.lightInfo="노출 "+expo.toFixed(2)+"("+how+") 조명색 "+cast.map(v=>v.toFixed(2)).join("/")+" 노이즈 "+S.noise.toFixed(4);
+}
+/* 사진 노이즈: 바닥이 아닌 평평한 면(벽)에서 작은 칸마다 주변 평균과의 차이를 재고, 아래쪽 30퍼센트 값을 씀 */
+function estimateNoise(){
+  try{
+    const W=S.W,H=S.H;
+    /* 사진 픽셀은 사진이 바뀔 때만 한 번 읽어 둠 */
+    if(!S.photoPx)S.photoPx=S.photoCanvas.getContext("2d").getImageData(0,0,W,H).data;
+    const d=S.photoPx;
+    const m=S.maskCanvas.getContext("2d").getImageData(0,0,W,H).data;
+    const vals=[],lv=new Float32Array(64),sx=Math.max(8,Math.floor(W/32)),sy=Math.max(8,Math.floor(H/40));
+    for(let by=8;by<H-16;by+=sy)for(let bx=8;bx<W-16;bx+=sx){
+      if(m[((by+4)*W+bx+4)*4]>25)continue;
+      let mean=0;
+      for(let yy=0;yy<8;yy++)for(let xx=0;xx<8;xx++){const i=((by+yy)*W+bx+xx)*4;const l=(.2126*d[i]+.7152*d[i+1]+.0722*d[i+2])/255;lv[yy*8+xx]=l;mean+=l;}
+      mean/=64;if(mean<.15||mean>.95)continue;
+      let rs=0,rc=0;
+      for(let yy=1;yy<7;yy++)for(let xx=1;xx<7;xx++){let a=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)a+=lv[(yy+dy)*8+xx+dx];const r=lv[yy*8+xx]-a/9;rs+=r*r;rc++;}
+      vals.push(Math.sqrt(rs/rc)*1.06);
+    }
+    if(vals.length<20)return .004;
+    vals.sort((a,b)=>a-b);
+    return Math.max(.002,Math.min(.03,vals[Math.floor(vals.length*.3)]));
+  }catch(e){return .004;}
+}
+/* 접지 그림자: 바닥이 아닌 것(벽, 가구, 문짝)에서 가까운 바닥일수록 살짝 어둡게. 사진 테두리는 벽이 아니라서 제외 */
+function computeAO(){
+  const k=Math.min(1,400/Math.max(S.W,S.H)),w=Math.max(8,Math.round(S.W*k)),h=Math.max(8,Math.round(S.H*k));
+  const md=shrink(S.maskCanvas,w,h),n=w*h,INF=1e9,d=new Float32Array(n);
+  let any=false,fl=false;
+  for(let i=0;i<n;i++){const f=md[i*4]>127;d[i]=f?INF:0;if(f)fl=true;else any=true;}
+  if(any&&fl){
+    const A=1,B=1.4142;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;let v=d[i];if(!v)continue;
+      if(x>0)v=Math.min(v,d[i-1]+A);if(y>0){v=Math.min(v,d[i-w]+A);if(x>0)v=Math.min(v,d[i-w-1]+B);if(x<w-1)v=Math.min(v,d[i-w+1]+B);}d[i]=v;}
+    for(let y=h-1;y>=0;y--)for(let x=w-1;x>=0;x--){const i=y*w+x;let v=d[i];if(!v)continue;
+      if(x<w-1)v=Math.min(v,d[i+1]+A);if(y<h-1){v=Math.min(v,d[i+w]+A);if(x<w-1)v=Math.min(v,d[i+w+1]+B);if(x>0)v=Math.min(v,d[i+w-1]+B);}d[i]=v;}
+  }
+  const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d"),id=x.createImageData(w,h);
+  const d0=Math.max(2,.012*Math.max(w,h)),A=.22;
+  for(let i=0;i<n;i++){const v=d[i]>=INF?1:1-A*Math.exp(-d[i]/d0);const q=Math.round(v*255);id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=q;id.data[i*4+3]=255;}
+  x.putImageData(id,0,0);return c;
 }
 /* 바닥 윗선 위치로 카메라 기울기 추정 */
 function estimatePitch(){
@@ -460,7 +587,7 @@ function ensureModel(){
     const cb=e=>{
       if(e&&e.status==="progress"&&e.total){files[e.file]=[e.loaded,e.total];
         let a=0,b=0;for(const k in files){a+=files[k][0];b+=files[k][1];}
-        if(S.aiBusy)chip("바닥 인식 준비 중 "+Math.round(a/b*100)+"% (처음 한 번만 받아요)","busy");}
+        if(S.aiBusy&&S.aiTok===S.loadToken)chip("바닥 인식 준비 중 "+Math.round(a/b*100)+"% (처음 한 번만 받아요)","busy");}
     };
     let last;
     for(const m of MODELS){
@@ -582,17 +709,31 @@ function upsample(p,pw,ph,W,H){
   }
   return out;
 }
-async function detectFloor(){
-  S.aiBusy=true;chip("바닥 찾는 중이에요","busy");
+/* 바닥 찾기는 한 번에 하나씩 차례로 (AI를 동시에 두 번 돌리면 고장 남)
+   기다리는 동안 다른 사진으로 바뀌었으면 건너뜀 */
+let detectQ=Promise.resolve();
+function queueDetect(tok){
+  chip("바닥 찾는 중이에요","busy");
+  detectQ=detectQ.then(()=>tok===S.loadToken?detectFloor(tok):null).catch(e=>console.error(e));
+  return detectQ;
+}
+async function detectFloor(tok){
+  if(tok==null)tok=S.loadToken;
+  const live=()=>tok===S.loadToken;
+  S.aiBusy=true;S.aiTok=tok;chip("바닥 찾는 중이에요","busy");
   try{
     const seg=await ensureModel();
+    if(!live())return;
     chip("바닥 찾는 중이에요","busy");
     await new Promise(r=>setTimeout(r,30));
+    if(!live())return;
     let pr;
     try{pr=await floorPrior(seg);}
-    catch(e){console.warn("fallback to pipeline",e);pr=await floorPriorPipeline(e&&e.seg?e.seg:await freshModel(seg));}
+    catch(e){console.warn("fallback to pipeline",e);if(!live())return;pr=await floorPriorPipeline(e&&e.seg?e.seg:await freshModel(seg));}
+    if(!live())return;
     chip("바닥 경계 다듬는 중이에요","busy");
     await new Promise(r=>setTimeout(r,30));
+    if(!live())return;
     const k=Math.min(1,800/Math.max(S.W,S.H)),ww=Math.max(8,Math.round(S.W*k)),wh=Math.max(8,Math.round(S.H*k));
     const c=document.createElement("canvas");c.width=ww;c.height=wh;
     const x=c.getContext("2d",{willReadFrequently:true});x.imageSmoothingQuality="high";
@@ -618,10 +759,14 @@ async function detectFloor(){
     if(params.get("debug")==="1")$("gpuNote").textContent="버전 "+VERSION+" · "+S.aiInfo;
     if(area<soft.length*.03){fallbackMask();applyAuto();chip("바닥을 잘 못 찾았어요. 바닥 고치기로 칠해 주세요","warn");}
     else{setMask(c);applyAuto();chip("다른 색상도 눌러 보세요","");}
+    histSave(true);
   }catch(e){
-    console.error(e);fallbackMask();applyAuto();
+    console.error(e);
+    if(!live())return;
+    fallbackMask();applyAuto();
     chip("자동 인식이 안 됐어요. 바닥 고치기로 범위를 칠해 주세요","warn");
-  }finally{S.aiBusy=false;}
+    histSave(true);
+  }finally{if(S.aiTok===tok)S.aiBusy=false;}
 }
 /* 바닥 경계선과 원래 바닥 줄눈으로 방의 가로세로 방향, 카메라 기울기 찾기 */
 function orientFloor(p0){
@@ -646,12 +791,12 @@ function orientFloor(p0){
 }
 function applyAuto(){
   const p=estimatePitch(),p0=p==null?35:p;
-  computeShade();
+  computeLighting();
   const o=orientFloor(p0);
   S.autoPitch=o.pitch;S.autoRoll=o.roll;S.autoRot=o.rot;S.rotStep=0;
   S.pitch=S.autoPitch;S.roll=S.autoRoll;S.rot=S.autoRot;S.fov=0;S.scale=1;
   S.orientInfo=o.info;
-  if(params.get("debug")==="1")$("gpuNote").textContent="버전 "+VERSION+" · "+(S.aiInfo||"")+" · "+o.info;
+  if(params.get("debug")==="1")$("gpuNote").textContent="버전 "+VERSION+" · "+(S.aiInfo||"")+" · "+o.info+" · "+(S.lightInfo||"");
   syncAdjust();render();
 }
 
@@ -762,6 +907,7 @@ async function onFile(e){
   clearPick();
   if(!f||loadingPhoto)return;
   loadingPhoto=true;
+  const tok=newLoad();
   chip("사진 불러오는 중이에요","busy");
   let got=null;
   try{
@@ -771,18 +917,23 @@ async function onFile(e){
       chip("사진 형식을 바꾸는 중이에요. 잠시만 기다려 주세요","busy");
       got=await decodeBlob(await heicToJpeg(f));
     }
+    if(tok!==S.loadToken)return;
     exitModes();
     setPhoto(got.img);
+    /* 최근 사진에 바로 저장 (바닥 범위는 찾고 나서 덧붙임) */
+    S.histId=histNewId();
+    histAdd(S.histId,S.photoCanvas);
   }catch(err){
     console.error(err);
-    chip("이 사진은 열 수 없어요. 다시 찍거나 다른 사진을 골라 주세요","warn");
+    if(tok===S.loadToken)chip("이 사진은 열 수 없어요. 다시 찍거나 다른 사진을 골라 주세요","warn");
     return;
   }finally{
     if(got)URL.revokeObjectURL(got.url);
     input.value="";loadingPhoto=false;
   }
-  if(params.get("noai")==="1"){fallbackMask();applyAuto();chip("범위를 직접 칠해 주세요","warn");}
-  else detectFloor();
+  if(tok!==S.loadToken)return;
+  if(params.get("noai")==="1"){fallbackMask();applyAuto();chip("범위를 직접 칠해 주세요","warn");histSave(true);}
+  else queueDetect(tok);
 }
 ["fileCam","fileAlbum"].forEach(id=>{
   const input=$(id);
@@ -799,10 +950,200 @@ view.addEventListener("webglcontextrestored",()=>{
     if(S.photoCanvas)upload("photo",S.photoCanvas,false);
     if(S.maskCanvas)uploadMask();
     if(S.shadeCanvas)upload("shade",S.shadeCanvas,false);
+    if(S.aoCanvas)upload("ao",S.aoCanvas,false);
     if(S.tileImg)upload("tile",S.tileImg,true);
     render();chip("다른 색상도 눌러 보세요","");
   }catch(err){console.error(err);chip("화면을 다시 켜지 못했어요. 새로 고침해 주세요","warn");}
 });
+
+/* ---------- 최근 올린 사진 ----------
+   이 기기 브라우저 안(IndexedDB)에만 저장, 최대 20장. 서버로는 아무것도 안 보냄
+   meta: 목록, 썸네일, 맞춘 값 / photo: 사진 / mask: 바닥 범위 (셋 다 같은 id로) */
+const HIST_DB="floorPreviewHistory",HIST_MAX=20,HIST_STORES=["meta","photo","mask"];
+let histDB=null,histList=[],histOK=true,histQ=Promise.resolve();
+const histURL=new Map();
+function histNewId(){return Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);}
+function histOpen(){
+  if(histDB)return histDB;
+  histDB=new Promise((res,rej)=>{
+    let r;
+    try{r=indexedDB.open(HIST_DB,1);}catch(e){rej(e);return;}
+    r.onupgradeneeded=()=>{const db=r.result;HIST_STORES.forEach(n=>{if(!db.objectStoreNames.contains(n))db.createObjectStore(n);});};
+    r.onsuccess=()=>{const db=r.result;db.onversionchange=()=>{try{db.close();}catch(e){}histDB=null;};res(db);};
+    r.onerror=()=>rej(r.error||new Error("idb open failed"));
+    r.onblocked=()=>rej(new Error("idb blocked"));
+  });
+  histDB.catch(()=>{histDB=null;});
+  return histDB;
+}
+async function histTx(mode,fn){
+  const db=await histOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(HIST_STORES,mode),out={};
+    tx.oncomplete=()=>res(out);
+    tx.onerror=()=>rej(tx.error||new Error("idb error"));
+    tx.onabort=()=>rej(tx.error||new Error("idb abort"));
+    try{fn(tx,out);}catch(e){try{tx.abort();}catch(_){}rej(e);}
+  });
+}
+/* 저장, 읽기는 한 줄로 차례차례 (방금 올린 사진 저장이 끝나기 전에 바닥 범위 저장이 먼저 가지 않게) */
+function histRun(fn){
+  const p=histQ.then(fn);
+  histQ=p.catch(e=>console.warn("최근 사진 처리 실패",e));
+  return p;
+}
+function histDrop(ids){return histTx("readwrite",tx=>ids.forEach(id=>HIST_STORES.forEach(s=>tx.objectStore(s).delete(id))));}
+function toBlob(c,type,q){return new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error("toBlob failed")),type,q));}
+function blobBuf(b){return b.arrayBuffer?b.arrayBuffer():new Response(b).arrayBuffer();}
+/* 사파리 일부 버전이 Blob 저장을 못 해서 바이트 배열로 저장 */
+async function packCanvas(c,type,q){return {buf:await blobBuf(await toBlob(c,type,q)),type};}
+function thumbOf(src,short){
+  let c=src,w=src.width,h=src.height;const k=short/Math.min(w,h);
+  if(k>=1)return src;
+  const tw=Math.max(1,Math.round(w*k)),th=Math.max(1,Math.round(h*k));
+  while(w/2>tw){const n=document.createElement("canvas");n.width=Math.round(w/2);n.height=Math.round(h/2);n.getContext("2d",{willReadFrequently:true}).drawImage(c,0,0,n.width,n.height);c=n;w=n.width;h=n.height;}
+  const n=document.createElement("canvas");n.width=tw;n.height=th;
+  const x=n.getContext("2d",{willReadFrequently:true});x.imageSmoothingQuality="high";x.drawImage(c,0,0,tw,th);return n;
+}
+function curParams(){return {pitch:S.pitch,roll:S.roll,fov:S.fov,scale:S.scale,rot:S.rot,rotStep:S.rotStep,autoPitch:S.autoPitch,autoRoll:S.autoRoll,autoRot:S.autoRot,shade:S.shade,bright:S.bright,info:S.orientInfo||""};}
+function ago(t){const s=Math.max(0,(Date.now()-t)/1000);if(s<90)return "방금";if(s<3600)return Math.round(s/60)+"분 전";if(s<86400)return Math.round(s/3600)+"시간 전";return Math.round(s/86400)+"일 전";}
+function histRender(){
+  const box=$("thumbs"),keep=new Set(histList.map(m=>m.id));
+  for(const [id,u] of histURL)if(!keep.has(id)){URL.revokeObjectURL(u);histURL.delete(id);}
+  box.textContent="";
+  $("recent").hidden=!histOK||!histList.length;
+  for(const m of histList){
+    const it=document.createElement("div");it.className="th";it.setAttribute("role","listitem");
+    const b=document.createElement("button");b.type="button";b.className="th-open";b.dataset.id=m.id;
+    b.setAttribute("aria-pressed",String(m.id===S.histId));b.setAttribute("aria-label",ago(m.t)+" 올린 사진 다시 보기");
+    const im=document.createElement("img");im.alt="";im.decoding="async";
+    let u=histURL.get(m.id);
+    if(!u&&m.thumb){try{u=URL.createObjectURL(new Blob([m.thumb.buf],{type:m.thumb.type||"image/jpeg"}));histURL.set(m.id,u);}catch(e){}}
+    if(u)im.src=u;
+    b.append(im);b.onclick=()=>histRestore(m.id);
+    const d=document.createElement("button");d.type="button";d.className="th-del";d.innerHTML="<span aria-hidden=\"true\">×</span>";d.setAttribute("aria-label",ago(m.t)+" 올린 사진 지우기");
+    d.onclick=e=>{e.stopPropagation();histDelete(m.id);};
+    it.append(b,d);box.append(it);
+  }
+}
+function histMark(){for(const b of $("thumbs").querySelectorAll(".th-open"))b.setAttribute("aria-pressed",String(b.dataset.id===S.histId));}
+async function histInit(){
+  try{
+    if(!window.indexedDB)throw new Error("no indexedDB");
+    const out=await histRun(()=>histTx("readonly",(tx,o)=>{
+      o.list=[];const r=tx.objectStore("meta").openCursor();
+      r.onsuccess=()=>{const c=r.result;if(c){if(c.value&&c.value.id)o.list.push(c.value);c.continue();}};
+    }));
+    const have=new Set(histList.map(m=>m.id));
+    histList=histList.concat(out.list.filter(m=>!have.has(m.id))).sort((a,b)=>b.t-a.t);
+    const extra=histList.splice(HIST_MAX);
+    if(extra.length)histRun(()=>histDrop(extra.map(m=>m.id)));
+    histRender();
+  }catch(e){console.warn("최근 사진 기능을 끔",e);histOK=false;$("recent").hidden=true;}
+}
+function histAdd(id,canvas){
+  if(!histOK)return;
+  const w=canvas.width,h=canvas.height;
+  histRun(async()=>{
+    const [photo,thumb]=await Promise.all([packCanvas(canvas,"image/jpeg",.9),packCanvas(thumbOf(canvas,216),"image/jpeg",.8)]);
+    const meta={id,t:Date.now(),w,h,thumb,hasMask:false,params:null};
+    const put=()=>histTx("readwrite",tx=>{tx.objectStore("meta").put(meta,id);tx.objectStore("photo").put(photo,id);});
+    try{await put();}
+    catch(e){
+      /* 저장 공간이 모자라면 오래된 사진 몇 장을 지우고 한 번 더 */
+      const old=histList.splice(Math.max(1,histList.length-5));
+      if(!old.length)throw e;
+      await histDrop(old.map(m=>m.id));
+      await put();
+    }
+    histList.unshift(meta);
+    const extra=histList.splice(HIST_MAX);
+    if(extra.length)await histDrop(extra.map(m=>m.id));
+    histRender();$("thumbs").scrollLeft=0;
+  });
+}
+/* 바닥 범위(withMask)와 맞춘 값을 지금 사진 기록에 덧붙임 */
+function histSave(withMask){
+  const id=S.histId;if(!id||!histOK)return;
+  const mc=withMask?S.maskCanvas:null,params=curParams();
+  histRun(async()=>{
+    const m=histList.find(x=>x.id===id);if(!m)return;
+    const mask=mc?await packCanvas(mc,"image/png"):null;
+    if(!histList.includes(m))return;
+    const meta=Object.assign({},m,{params,hasMask:m.hasMask||!!mask});
+    await histTx("readwrite",tx=>{tx.objectStore("meta").put(meta,id);if(mask)tx.objectStore("mask").put(mask,id);});
+    Object.assign(m,meta);
+  });
+}
+function histDelete(id){
+  histList=histList.filter(m=>m.id!==id);
+  if(S.histId===id)S.histId=null;
+  histRender();
+  histRun(()=>histDrop([id]));
+}
+function histClearAll(){
+  const ids=histList.map(m=>m.id);
+  histList=[];S.histId=null;histRender();
+  histRun(()=>histTx("readwrite",tx=>HIST_STORES.forEach(s=>tx.objectStore(s).clear())));
+  if(ids.length)chip("최근 사진을 모두 지웠어요","");
+}
+function histApplyParams(p){
+  if(!p||!["pitch","rot","autoPitch","autoRot"].every(k=>Number.isFinite(p[k])))return false;
+  const n=(v,d)=>Number.isFinite(v)?v:d;
+  computeLighting();
+  S.autoPitch=p.autoPitch;S.autoRoll=n(p.autoRoll,0);S.autoRot=p.autoRot;S.rotStep=n(p.rotStep,0);
+  S.pitch=p.pitch;S.roll=n(p.roll,0);S.fov=n(p.fov,0);S.scale=n(p.scale,1);S.rot=p.rot;S.shade=n(p.shade,.85);S.bright=n(p.bright,1);
+  S.orientInfo=String(p.info||"");
+  if(params.get("debug")==="1")$("gpuNote").textContent="버전 "+VERSION+" · 최근 사진 · "+S.orientInfo+" · "+(S.lightInfo||"");
+  syncAdjust();render();
+  return true;
+}
+/* 썸네일 누르면: AI 다시 안 돌리고 저장해 둔 바닥 범위와 맞춘 값으로 바로 보여줌 */
+async function histRestore(id){
+  if(!histOK||id===S.histId)return;
+  const m=histList.find(x=>x.id===id);if(!m)return;
+  exitModes();
+  const tok=newLoad(),urls=[];
+  chip("사진 불러오는 중이에요","busy");
+  try{
+    const rec=await histRun(()=>histTx("readonly",(tx,o)=>{
+      tx.objectStore("photo").get(id).onsuccess=e=>{o.photo=e.target.result;};
+      tx.objectStore("mask").get(id).onsuccess=e=>{o.mask=e.target.result;};
+    }));
+    if(tok!==S.loadToken)return;
+    const gone=()=>{const e=new Error("saved photo missing");e.gone=true;return e;};
+    if(!rec||!rec.photo||!rec.photo.buf)throw gone();
+    let p;
+    try{p=await decodeBlob(new Blob([rec.photo.buf],{type:rec.photo.type||"image/jpeg"}));urls.push(p.url);}catch(e){throw gone();}
+    let mk=null;
+    if(m.hasMask&&rec.mask&&rec.mask.buf){try{mk=await decodeBlob(new Blob([rec.mask.buf],{type:rec.mask.type||"image/png"}));urls.push(mk.url);}catch(e){mk=null;}}
+    if(tok!==S.loadToken)return;
+    setPhoto(p.img,true);S.histId=id;histMark();
+    if(mk){
+      setMask(mk.img);
+      if(!histApplyParams(m.params))applyAuto();
+      chip("다른 색상도 눌러 보세요","");
+    }else if(params.get("noai")==="1"){fallbackMask();applyAuto();chip("범위를 직접 칠해 주세요","warn");histSave(true);}
+    else queueDetect(tok);
+  }catch(e){
+    console.warn("최근 사진 열기 실패",e);
+    if(tok===S.loadToken)chip("이 사진은 다시 불러오지 못했어요","warn");
+    if(e&&e.gone)histDelete(id);
+  }finally{urls.forEach(u=>URL.revokeObjectURL(u));}
+}
+let clearArmed=false,clearTimer=null;
+$("rClear").onclick=()=>{
+  const b=$("rClear");
+  if(!clearArmed){
+    clearArmed=true;b.textContent="한 번 더 누르면 다 지워져요";b.classList.add("armed");
+    clearTimer=setTimeout(()=>{clearArmed=false;b.textContent="모두 지우기";b.classList.remove("armed");},3500);
+    return;
+  }
+  clearTimeout(clearTimer);clearArmed=false;b.textContent="모두 지우기";b.classList.remove("armed");
+  histClearAll();
+};
+/* 바닥 고치기, 세부 조정 중에 앱을 닫아도 고친 데까지는 남게 */
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&S.histId&&(S.brush||S.adjust))histSave(S.brush);});
 
 /* ---------- 도구 ---------- */
 function exitModes(){setBrush(false);setAdjust(false);}
@@ -820,22 +1161,25 @@ function updateSplitUI(){
   $("split").style.top=(r.top-st.top)+"px";$("split").style.bottom="auto";$("split").style.height=r.height+"px";
 }
 function setBrush(on){
+  const was=S.brush;
   S.brush=on;$("tBrush").setAttribute("aria-pressed",String(on));$("brushPanel").hidden=!on;
   $("stage").classList.toggle("drawing",on);
   if(on){if(S.compare)setCompare(false);setAdjust(false);chip("파란 곳이 바닥으로 잡힌 범위예요","");}
-  else computeShade();
+  else if(was){computeLighting();histSave(true);}
   render();
 }
 function setAdjust(on){
+  const was=S.adjust;
   S.adjust=on;$("tAdjust").setAttribute("aria-pressed",String(on));$("adjustPanel").hidden=!on;
   if(on){if(S.compare)setCompare(false);setBrush(false);}
+  else if(was)histSave(false);
   render();
 }
 $("tCompare").onclick=()=>setCompare(!S.compare);
 $("tBrush").onclick=()=>setBrush(!S.brush);
 $("tAdjust").onclick=()=>setAdjust(!S.adjust);
 /* 방향 버튼: 자동으로 맞춘 방향에서 90도, 대각선 순서로 돌려봄 */
-$("tRotate").onclick=()=>{const steps=[0,90,45,135];S.rotStep=(S.rotStep+1)%steps.length;S.rot=Math.round(((S.autoRot+steps[S.rotStep])%180)*10)/10;syncAdjust();render();};
+$("tRotate").onclick=()=>{const steps=[0,90,45,135];S.rotStep=(S.rotStep+1)%steps.length;S.rot=Math.round(((S.autoRot+steps[S.rotStep])%180)*10)/10;syncAdjust();render();histSave(false);};
 $("bAdd").onclick=()=>{S.brushAdd=true;$("bAdd").setAttribute("aria-pressed","true");$("bErase").setAttribute("aria-pressed","false");};
 $("bErase").onclick=()=>{S.brushAdd=false;$("bAdd").setAttribute("aria-pressed","false");$("bErase").setAttribute("aria-pressed","true");};
 $("bSize").oninput=e=>{S.brushSize=+e.target.value;$("bSizeOut").textContent=S.brushSize;};
@@ -843,7 +1187,7 @@ $("bSizeOut").textContent=S.brushSize;
 $("bUndo").onclick=()=>{const d=S.undo.pop();if(d){S.maskCtx.putImageData(d,0,0);uploadMask();render();}};
 $("bDone").onclick=()=>setBrush(false);
 $("aDone").onclick=()=>setAdjust(false);
-$("aReset").onclick=()=>{S.pitch=S.autoPitch;S.roll=S.autoRoll||0;S.fov=0;S.scale=1;S.rot=S.autoRot;S.rotStep=0;S.shade=.85;syncAdjust();render();};
+$("aReset").onclick=()=>{S.pitch=S.autoPitch;S.roll=S.autoRoll||0;S.fov=0;S.scale=1;S.rot=S.autoRot;S.rotStep=0;S.shade=.85;S.bright=1;syncAdjust();render();histSave(false);};
 
 const sliders=[
   ["aPitch",v=>S.pitch=v,()=>S.pitch,v=>v.toFixed(1)+"°"],
@@ -851,7 +1195,8 @@ const sliders=[
   ["aFov",v=>S.fov=v,()=>S.fov,v=>(v>0?"+":"")+v],
   ["aScale",v=>S.scale=v/100,()=>Math.round(S.scale*100),v=>v+"%"],
   ["aRot",v=>S.rot=v,()=>S.rot,v=>v+"°"],
-  ["aShade",v=>S.shade=v/100,()=>Math.round(S.shade*100),v=>v+"%"]
+  ["aShade",v=>S.shade=v/100,()=>Math.round(S.shade*100),v=>v+"%"],
+  ["aBright",v=>S.bright=v/100,()=>Math.round((S.bright||1)*100),v=>v+"%"]
 ];
 sliders.forEach(([id,set,,fmt])=>{$(id).addEventListener("input",e=>{const v=+e.target.value;set(v);$(id+"Out").textContent=fmt(v);if(id==="aShade"||id==="aPitch"||id==="aFov"||id==="aScale"){}render();});});
 function syncAdjust(){sliders.forEach(([id,,get,fmt])=>{const v=get();$(id).value=v;$(id+"Out").textContent=fmt(+v);});}
@@ -912,23 +1257,28 @@ async function start(){
   const want=String(params.get("item")||"").trim().toLowerCase();let idx=Math.max(0,PRODUCTS.findIndex(p=>String(p.code).toLowerCase()===want));
   selectProduct(idx);
   syncAdjust();
+  histInit();
   const interrupted=pickInterrupted();
   const welcome=()=>interrupted
     ?chip("사진 고르는 동안 화면이 새로 열렸어요. 다른 앱을 닫고 앨범에서 고르기로 다시 해 주세요","warn")
     :chip("예시 방이에요. 우리집 사진을 올려 보세요","");
+  const tok=newLoad();
   let room=null;
-  try{room=await loadImg("sample/room.jpg");}catch(e){chip("우리집 사진을 올려 보세요","");return;}
-  if(S.W)return;
-  setPhoto(room);
+  try{room=await loadImg("sample/room.jpg");}catch(e){if(tok===S.loadToken)chip("우리집 사진을 올려 보세요","");return;}
+  if(tok!==S.loadToken||S.W)return;
+  setPhoto(room);S.histId=null;
   try{
     const mask=await loadImg("sample/room-mask.png");
+    if(tok!==S.loadToken)return;
     setMask(mask);applyAuto();welcome();
   }catch(e){
-    await detectFloor();
-    if(!$("chip").classList.contains("warn"))welcome();
+    if(tok!==S.loadToken)return;
+    await queueDetect(tok);
+    if(tok===S.loadToken&&!$("chip").classList.contains("warn"))welcome();
   }
 }
-window.__sim={S,setMask:src=>{setMask(src);applyAuto();},render,draw,selectProduct,homography};
+window.__sim={S,setMask:src=>{setMask(src);applyAuto();},render,draw,selectProduct,homography,
+  hist:{list:()=>histList.map(m=>({id:m.id,t:m.t,hasMask:m.hasMask,params:m.params})),restore:histRestore,del:histDelete,idle:()=>histQ,detect:()=>detectQ}};
 if(params.get("debug")==="1")window.__sim.dbg={ensureModel,floorPrior,floorPriorPipeline,upsample,modelSize};
 start();
 })();
