@@ -62,9 +62,35 @@
       const phi = 0.5 * Math.atan2(2 * Bxy[i], Bxx[i] - Byy[i]) + Math.PI / 2;
       /* 사진에서 거의 세로로 선 경계는 대부분 문짝, 가구 다리 같은 물건 옆면이라 바닥 선이 아님 */
       const fromVert = Math.abs(Math.atan2(Math.abs(Math.cos(phi)), Math.abs(Math.sin(phi)))) * 180 / Math.PI;
-      const vk = fromVert < 15 ? 0.1 : fromVert < 25 ? 0.1 + 0.9 * (fromVert - 15) / 10 : 1;
+      const vk = fromVert < 15 ? 0.05 : fromVert < 25 ? 0.05 + 0.95 * (fromVert - 15) / 10 : 1;
       const wgt = coh * coh * vk;
       xs.push(x); ys.push(y); txs.push(Math.cos(phi)); tys.push(Math.sin(phi)); ws.push(wgt); src.push(0); bSum += wgt;
+    }
+    /* 같은 직선 위에 있는 경계 조각 수(=그 선의 길이)를 세서, 긴 벽 밑 선일수록 훨씬 크게 믿음
+       (바닥 인식이 덜 된 자투리 경계, 짧은 꺾임은 거의 무시) */
+    const nb = ws.length;
+    if (nb) {
+      const TB = 90, RB = 2, diag = Math.hypot(w, h), RN = Math.ceil(2 * diag / RB) + 3;
+      const acc = new Float32Array(TB * RN), key = new Int32Array(nb), tb = new Int32Array(nb), rb = new Int32Array(nb);
+      for (let j = 0; j < nb; j++) {
+        let th = Math.atan2(tys[j], txs[j]) + Math.PI / 2; th = ((th % Math.PI) + Math.PI) % Math.PI;
+        const t = Math.min(TB - 1, Math.floor(th / Math.PI * TB));
+        const rho = xs[j] * Math.cos((t + 0.5) * Math.PI / TB) + ys[j] * Math.sin((t + 0.5) * Math.PI / TB);
+        const r = Math.round((rho + diag) / RB) + 1;
+        tb[j] = t; rb[j] = r; acc[t * RN + r] += 1;
+      }
+      let mx = 0;
+      const sup = new Float32Array(nb);
+      for (let j = 0; j < nb; j++) {
+        let c = 0;
+        for (let dt = -1; dt <= 1; dt++) { const t = (tb[j] + dt + TB) % TB; for (let dr = -1; dr <= 1; dr++) { const r = rb[j] + dr; if (r >= 0 && r < RN) c += acc[t * RN + r]; } }
+        sup[j] = c;
+        /* 가장 긴 선의 기준은 세로가 아닌 선(진짜 벽 밑 선 후보)으로만 잡음 */
+        if (ws[j] > 0.5 * 0.75 * 0.75 && c > mx) mx = c;
+      }
+      if (!mx) for (let j = 0; j < nb; j++) if (sup[j] > mx) mx = sup[j];
+      bSum = 0;
+      for (let j = 0; j < nb; j++) { const f = mx > 0 ? sup[j] / mx : 0; ws[j] *= f < 0.12 ? 0.04 : f; bSum += ws[j]; }
     }
     /* 2 원래 바닥의 줄눈, 마루 이음선: 바닥 안쪽에서 길게 이어지는 선만 */
     const L = boxBlur(lum, w, h, 1);
@@ -98,15 +124,21 @@
     }
     /* 경계선과 바닥 무늬가 서로 비슷한 힘을 갖도록 맞춤 (무늬 없는 바닥이면 경계선 위주) */
     if (bSum > 0 && tSum > 0) {
-      const k = bSum / tSum;
+      const k = 0.6 * bSum / tSum;
       for (let j = 0; j < ws.length; j++) if (src[j] === 1) ws[j] *= k;
     }
     return { xs, ys, txs, tys, ws, src, nBoundary: src.filter(s => s === 0).length, nTexture: src.filter(s => s === 1).length };
   }
 
   const BINS = 180; /* 0.5도 간격, 0~90도 (직각으로 접어서 봄) */
-  function histogram(S, sx, W, H, pitch, roll, fovAdj) {
+  function histogram(S, sx, W, H, pitch, roll, fovAdj, far) {
     const [A, B, C] = camRows(W, H, pitch, roll, fovAdj);
+    let plaus = 1;
+    if (far) {
+      const fx = far[0] * sx, fy = far[1] * sx, d = C[0] * fx + C[1] * fy + C[2];
+      const Z = d > 1e-6 ? (B[0] * fx + B[1] * fy + B[2]) / d : Infinity;
+      if (!(Z < 15000)) plaus = 0.25;
+    }
     const hist = new Float64Array(BINS);
     const d = 2 * sx;
     let total = 0;
@@ -131,7 +163,7 @@
     const l = sm[(pk - 1 + BINS) % BINS], c = sm[pk], r = sm[(pk + 1) % BINS];
     const off = (l - 2 * c + r) !== 0 ? 0.5 * (l - r) / (l - 2 * c + r) : 0;
     const beta = ((pk + 0.5 + off) / 2 + 90) % 90;
-    return { score: total > 0 ? c / total : 0, beta, total };
+    return { score: total > 0 ? c / total * plaus : 0, beta, total, plaus };
   }
 
   /*
@@ -142,12 +174,19 @@
     const { mask, lum, w, h, W, H } = opts;
     const fov = opts.fovAdj || 0, sx = W / w;
     const S = collect(mask, lum, w, h);
+    /* 바닥의 가장 먼 끝(가운데 쪽 윗선) */
+    let far = null;
+    { const ysTop = [];
+      for (let x = Math.floor(w * 0.2); x < Math.ceil(w * 0.8); x += 2) for (let y = 0; y < h; y++) if (mask[y * w + x] > 0.5) { ysTop.push([x, y]); break; }
+      if (ysTop.length) { ysTop.sort((a, b) => a[1] - b[1]); far = ysTop[Math.floor(ysTop.length * 0.1)]; } }
     const res = { pitch: opts.pitch0, roll: 0, beta: null, score: 0, used: false, nBoundary: S.nBoundary, nTexture: S.nTexture };
     if (S.ws.length < 30) return res;
-    const base = histogram(S, sx, W, H, opts.pitch0, 0, fov);
+    const base = histogram(S, sx, W, H, opts.pitch0, 0, fov, far);
     res.score = base.score; res.beta = base.beta;
-    let best = { pitch: opts.pitch0, roll: 0, h: base };
-    const tryP = (p, r) => { const hh = histogram(S, sx, W, H, p, r, fov); if (hh.score > best.h.score) best = { pitch: p, roll: r, h: hh }; };
+    /* 처음 짐작한 기울기에서 멀어질수록 조금씩 덜 믿음: 약한 증거로 기울기가 크게 끌려가지 않게 */
+    const prior = (p, r) => Math.exp(-(((p - opts.pitch0) / 18) ** 2) - ((r / 6) ** 2));
+    let best = { pitch: opts.pitch0, roll: 0, h: base, adj: base.score };
+    const tryP = (p, r) => { const hh = histogram(S, sx, W, H, p, r, fov, far), a = hh.score * prior(p, r); if (a > best.adj) best = { pitch: p, roll: r, h: hh, adj: a }; };
     const lo = Math.max(4, opts.pitch0 - 25), hi = Math.min(75, opts.pitch0 + 25);
     for (let p = lo; p <= hi; p += 1) tryP(p, 0);
     for (let p = best.pitch - 1; p <= best.pitch + 1; p += 0.25) tryP(p, 0);
@@ -155,11 +194,12 @@
     for (let r = -8; r <= 8; r += 0.5) tryP(p1, r);
     const r1 = best.roll;
     for (let p = p1 - 2; p <= p1 + 2; p += 0.25) tryP(p, r1);
-    /* 증거가 충분할 때만 기울기를 바꿈 */
+    /* 선이 충분히 모일 때만 씀. 처음 짐작에서 멀어지는 건 위의 약한 끌림으로 이미 막고 있음 */
     const minScore = 0.03;
-    if (best.h.score >= minScore && best.h.score >= base.score * 1.1) {
-      res.pitch = Math.max(4, Math.min(75, best.pitch)); res.roll = best.roll; res.beta = best.h.beta; res.score = best.h.score; res.used = true;
-    } else if (base.score < minScore) {
+    if (best.h.score >= minScore) {
+      res.pitch = Math.max(4, Math.min(75, best.pitch)); res.roll = best.roll; res.beta = best.h.beta; res.score = best.h.score;
+      res.used = best.pitch !== opts.pitch0 || best.roll !== 0;
+    } else {
       res.beta = null;
     }
     return res;
