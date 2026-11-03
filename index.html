@@ -219,10 +219,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.03a"></script>
-<script src="refine.js?v=2026.11.03a"></script>
-<script src="orient.js?v=2026.11.03a"></script>
-<script src="camera.js?v=2026.11.03a"></script>
+<script src="products.js?v=2026.11.03b"></script>
+<script src="refine.js?v=2026.11.03b"></script>
+<script src="orient.js?v=2026.11.03b"></script>
+<script src="camera.js?v=2026.11.03b"></script>
 <script>
 (function(){
 "use strict";
@@ -238,7 +238,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.03a";
+const VERSION="2026.11.03b";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -281,7 +281,11 @@ in vec2 p;out vec2 vUv;
 void main(){vUv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}`;
 const FS=`#version 300 es
 precision highp float;
-uniform sampler2D uPhoto,uMask,uShade,uTile,uAO;
+precision highp sampler2DArray;
+uniform sampler2D uPhoto,uMask,uShade,uAO;
+/* 데코타일 무늬: 서로 다른 무늬 여러 장(보통 4장)을 겹겹이 넣어 두고 타일마다 아무거나 하나씩 */
+uniform sampler2DArray uTile;
+uniform float uLayers;
 uniform vec3 uExpo,uWB;
 uniform float uNoise;
 uniform vec2 uSize,uMaskTexel,uTileMM;
@@ -313,8 +317,10 @@ void main(){
     vec2 lc=cf-cell;
     float r1=h2(cell+vec2(0.,row*.37));
     vec2 tuv=r1>.5?1.-lc:lc;
+    /* 이 타일이 쓸 무늬: 4장 중 하나를 칸마다 무작위로 (반 바퀴 돌림과 따로 섞어 8가지 모습) */
+    float layer=min(floor(h2(cell*vec2(1.731,2.417)+vec2(5.3,1.7))*uLayers),uLayers-1.);
     /* 폰 카메라로 찍은 것처럼 아주 살짝 덜 또렷하게 (제품 원본 사진의 칼같은 선명함은 CG처럼 보임) */
-    vec3 t=textureGrad(uTile,tuv,dFdx(cf)*1.25,dFdy(cf)*1.25).rgb;
+    vec3 t=textureGrad(uTile,vec3(tuv,layer),dFdx(cf)*1.25,dFdy(cf)*1.25).rgb;
     vec2 dmm=min(lc,1.-lc)*sz;
     float fw=max(length(dFdx(P)),length(dFdy(P)));
     float d=min(dmm.x,dmm.y);
@@ -356,11 +362,13 @@ function initGL(){
   const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   const loc=gl.getAttribLocation(prog,"p");gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-  ["uPhoto","uMask","uShade","uTile","uAO","uExpo","uWB","uNoise","uSize","uMaskTexel","uTileMM","uH0","uH1","uH2","uPattern","uRot","uShadeAmt","uSplit","uMaskView","uGrid","uHasTile"].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
+  ["uPhoto","uMask","uShade","uTile","uAO","uExpo","uWB","uNoise","uSize","uMaskTexel","uTileMM","uLayers","uH0","uH1","uH2","uPattern","uRot","uShadeAmt","uSplit","uMaskView","uGrid","uHasTile"].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
   TEXN.forEach((n,i)=>{TEX[n]=gl.createTexture();gl.uniform1i(U[n==="ao"?"uAO":"u"+n[0].toUpperCase()+n.slice(1)],i);});
   const one=document.createElement("canvas");one.width=one.height=1;const ox=one.getContext("2d");ox.fillStyle="#fff";ox.fillRect(0,0,1,1);
   upload("ao",one,false);
   const an=gl.getExtension("EXT_texture_filter_anisotropic");TEX.aniso=an;
+  /* 제품 무늬가 오기 전에도 비어 있지 않게 흰 점 한 장 */
+  const keepN=S.tileLayersN;uploadTileLayers([one]);S.tileLayersN=keepN||1;
 }
 const TEXN=["photo","mask","shade","tile","ao"];
 function upload(name,src,mip){
@@ -374,6 +382,20 @@ function upload(name,src,mip){
   if(mip){gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
     if(TEX.aniso)gl.texParameterf(gl.TEXTURE_2D,TEX.aniso.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(8,gl.getParameter(TEX.aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));}
   else gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+}
+
+/* 데코타일 무늬 여러 장을 한 텍스처 배열로 (장마다 따로 축소본을 만들어 이웃 무늬가 번지지 않음) */
+function uploadTileLayers(layers){
+  const unit=TEXN.indexOf("tile"),w=layers[0].width,h=layers[0].height,n=layers.length,T=gl.TEXTURE_2D_ARRAY;
+  gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(T,TEX.tile);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+  gl.texImage3D(T,0,gl.RGBA8,w,h,n,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+  layers.forEach((c,i)=>gl.texSubImage3D(T,0,0,0,i,w,h,1,gl.RGBA,gl.UNSIGNED_BYTE,c));
+  gl.texParameteri(T,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(T,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(T,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.generateMipmap(T);gl.texParameteri(T,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+  if(TEX.aniso)gl.texParameterf(T,TEX.aniso.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(8,gl.getParameter(TEX.aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+  S.tileLayersN=n;
 }
 
 /* 사진 좌표를 바닥 평면 좌표(mm)로 바꾸는 행렬: 카메라 높이(천장, 문으로 잰 값, 없으면 1.4m), 기울기, 수평, 화각(사진 촬영 정보)으로 계산 */
@@ -402,6 +424,7 @@ function draw(){
   gl.uniform2f(U.uMaskTexel,1/S.W,1/S.H);
   const p=S.product||{width:920,height:152,pattern:"stagger"};
   gl.uniform2f(U.uTileMM,+p.width||600,+p.height||600);
+  gl.uniform1f(U.uLayers,S.tileLayersN||1);
   gl.uniform1i(U.uPattern,p.pattern==="stagger"?1:p.pattern==="half"?2:0);
   gl.uniform1f(U.uRot,S.rot*Math.PI/180);
   gl.uniform1f(U.uShadeAmt,S.shade);
@@ -913,7 +936,25 @@ function buildSwatches(){
     b.append(im,t);b.onclick=()=>selectProduct(i);box.append(b);
   });
 }
-const tileCache={};
+/* 제품 무늬 캐시: 최근 3개 제품만 (4장짜리는 큼직해서 폰 메모리 아끼려고) */
+const tileCache=new Map();
+function cacheTile(key,layers){
+  tileCache.delete(key);tileCache.set(key,layers);
+  while(tileCache.size>3){
+    const [k,v]=tileCache.entries().next().value;tileCache.delete(k);
+    if(v!==S.tileLayers)for(const c of v){try{c.width=c.height=0;}catch(e){}}
+  }
+}
+/* 4장 세트 이미지(2×2, 줄눈 없이 붙인 것) → 4장으로 나눠 장마다 밝기 기울기 펴기 */
+function splitSet(img){
+  const W=img.naturalWidth||img.width,q=Math.floor(W/2),L=Math.min(1024,q);
+  return [0,1,2,3].map(k=>{
+    const c=document.createElement("canvas");c.width=c.height=L;
+    const x=c.getContext("2d",{willReadFrequently:true});x.imageSmoothingQuality="high";
+    x.drawImage(img,(k%2)*q,(k>>1)*q,q,q,0,0,L,L);
+    try{return flattenTile(c);}catch(e){return c;}
+  });
+}
 /* 제품 사진에 들어 있는 큰 밝기 기울기(조명, 비네팅)를 펴서, 타일마다 같은 그림자가 반복돼 보이지 않게 함
    무늬는 그대로 두고 아주 완만한 밝기 변화(2차 곡면)만 빼냄 */
 function flattenTile(img){
@@ -959,11 +1000,18 @@ function selectProduct(i){
   }
   $("pName").textContent=p.name;$("pSpec").textContent=specText(p);
   const a=$("pLink");if(p.url){a.href=p.url;a.hidden=false;}else a.hidden=true;
-  const done=img=>{if(S.product!==p)return;S.tileImg=img;upload("tile",img,true);S.tileReady=true;render();};
-  if(tileCache[p.image])return done(tileCache[p.image]);
-  const img=new Image();img.onload=()=>{let t=img;try{t=flattenTile(img);}catch(e){console.warn("flatten failed",e);}tileCache[p.image]=t;done(t);};
-  img.onerror=()=>chip("제품 이미지를 못 불러왔어요: "+p.image,"warn");
-  img.src=bust(p.image);
+  const done=layers=>{if(S.product!==p)return;S.tileLayers=layers;uploadTileLayers(layers);S.tileReady=true;render();};
+  /* 무늬 4장 세트(tiles4)가 있으면 4장을 섞어 깔고, 없으면 한 장으로 */
+  const load=(src,isSet)=>{
+    if(tileCache.has(src)){const v=tileCache.get(src);cacheTile(src,v);return done(v);}
+    const img=new Image();
+    img.onload=()=>{let layers;
+      try{layers=isSet?splitSet(img):[flattenTile(img)];}catch(e){console.warn("tile prep failed",e);const c=document.createElement("canvas");c.width=img.naturalWidth;c.height=img.naturalHeight;c.getContext("2d").drawImage(img,0,0);layers=[c];}
+      cacheTile(src,layers);done(layers);};
+    img.onerror=()=>{if(isSet&&p.image)load(p.image,false);else chip("제품 이미지를 못 불러왔어요: "+src,"warn");};
+    img.src=bust(src);
+  };
+  if(p.tiles4)load(p.tiles4,true);else load(p.image,false);
 }
 
 /* ---------- 사진 올리기 ---------- */
@@ -1054,7 +1102,7 @@ view.addEventListener("webglcontextrestored",()=>{
     if(S.maskCanvas)uploadMask();
     if(S.shadeCanvas)upload("shade",S.shadeCanvas,false);
     if(S.aoCanvas)upload("ao",S.aoCanvas,false);
-    if(S.tileImg)upload("tile",S.tileImg,true);
+    if(S.tileLayers)uploadTileLayers(S.tileLayers);
     render();chip("다른 색상도 눌러 보세요","");
   }catch(err){console.error(err);chip("화면을 다시 켜지 못했어요. 새로 고침해 주세요","warn");}
 });
