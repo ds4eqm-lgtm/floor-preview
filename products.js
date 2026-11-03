@@ -142,6 +142,28 @@ window.PRODUCTS = [
     height: 600,
     pattern: "grid",
     url: ""
+  },
+  {
+    name: "NPT16882",
+    code: "NPT16882",
+    image: "tiles/NPT16882.jpg",
+    tiles4: "tiles4/NPT16882.jpg",
+    thumb: "thumbs/NPT16882.jpg",
+    width: 600,
+    height: 600,
+    pattern: "grid",
+    url: ""
+  },
+  {
+    name: "NPT16992",
+    code: "NPT16992",
+    image: "tiles/NPT16992.jpg",
+    tiles4: "tiles4/NPT16992.jpg",
+    thumb: "thumbs/NPT16992.jpg",
+    width: 600,
+    height: 600,
+    pattern: "grid",
+    url: ""
   }
 ];
 
