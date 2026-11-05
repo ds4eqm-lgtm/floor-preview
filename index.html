@@ -62,6 +62,11 @@ button:disabled{opacity:.45;cursor:default}
 .sw[aria-pressed="true"] .img{border-color:var(--accent);box-shadow:0 0 0 2px var(--card) inset}
 .sw[aria-pressed="true"]{background:none}
 .layout>*,.side>*{min-width:0}
+/* 제품 분류 탭 (기본형, 뉴에코홈 저수축 등) */
+.cats{display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 12px}
+.cats button{min-height:38px;padding:7px 14px;border-radius:999px;font-size:13.5px;font-weight:650;background:var(--paper);border-color:var(--line);color:var(--muted)}
+.cats button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.cats button .n{font-weight:500;margin-left:4px;opacity:.75;font-variant-numeric:tabular-nums}
 @media (max-width:899px){
   #view{max-height:56vh}
   .swatches{position:relative;display:flex;overflow-x:auto;gap:10px;margin-inline:-14px;padding:0 14px 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
@@ -157,6 +162,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
     <aside class="side">
       <div class="panel">
         <p class="label">색상 고르기</p>
+        <div class="cats" id="cats" role="tablist" aria-label="제품 분류" hidden></div>
         <div class="swatches" id="swatches"></div>
       </div>
 
@@ -219,10 +225,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.03c"></script>
-<script src="refine.js?v=2026.11.03c"></script>
-<script src="orient.js?v=2026.11.03c"></script>
-<script src="camera.js?v=2026.11.03c"></script>
+<script src="products.js?v=2026.11.05a"></script>
+<script src="refine.js?v=2026.11.05a"></script>
+<script src="orient.js?v=2026.11.05a"></script>
+<script src="camera.js?v=2026.11.05a"></script>
 <script>
 (function(){
 "use strict";
@@ -238,7 +244,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.03c";
+const VERSION="2026.11.05a";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -927,10 +933,30 @@ function specText(p){
   const pat={stagger:"엇갈림 시공",half:"반장 엇갈림 시공",grid:"바둑판 시공"}[p.pattern]||"";
   return (+p.width)+" × "+(+p.height)+" mm"+(pat?" · "+pat:"");
 }
+/* 분류 탭: products.js 의 category 이름별로 (처음 나온 순서) */
+function catOf(p){return String((p&&p.category)||"기본형");}
+function buildCats(){
+  const box=$("cats");box.textContent="";
+  const names=[...new Set(PRODUCTS.map(catOf))];
+  box.hidden=names.length<2;
+  for(const n of names){
+    const b=document.createElement("button");b.type="button";b.setAttribute("role","tab");b.dataset.cat=n;
+    b.setAttribute("aria-selected","false");
+    const c=document.createElement("span");c.className="n";c.textContent=PRODUCTS.filter(p=>catOf(p)===n).length;
+    b.append(document.createTextNode(n),c);b.onclick=()=>showCat(n);box.append(b);
+  }
+}
+function showCat(n){
+  S.cat=n;
+  for(const b of $("cats").children)b.setAttribute("aria-selected",String(b.dataset.cat===n));
+  for(const b of $("swatches").children)b.hidden=b.dataset.cat!==n;
+  const sw=$("swatches");try{sw.scrollLeft=0;}catch(e){}
+}
 function buildSwatches(){
+  buildCats();
   const box=$("swatches");box.textContent="";
   PRODUCTS.forEach((p,i)=>{
-    const b=document.createElement("button");b.className="sw";b.type="button";b.setAttribute("aria-pressed","false");
+    const b=document.createElement("button");b.className="sw";b.type="button";b.setAttribute("aria-pressed","false");b.dataset.cat=catOf(p);
     const im=document.createElement("span");im.className="img";im.style.backgroundImage="url('"+bust(encodeURI(p.thumb||p.image))+"')";
     const t=document.createElement("span");t.textContent=p.name;
     b.append(im,t);b.onclick=()=>selectProduct(i);box.append(b);
@@ -991,6 +1017,7 @@ function flattenTile(img){
 function selectProduct(i){
   const p=PRODUCTS[i];if(!p)return;
   S.product=p;
+  if(S.cat!==catOf(p))showCat(catOf(p));
   const box=$("swatches");
   [...box.children].forEach((b,j)=>b.setAttribute("aria-pressed",String(j===i)));
   const btn=box.children[i];

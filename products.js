@@ -2,6 +2,7 @@
 // 제품 하나당 중괄호 한 묶음, 묶음 사이에는 쉼표
 // name    화면에 보이는 제품 이름 (모델명)
 // code    주소 뒤에 ?item=코드 붙이면 그 제품이 먼저 선택됨 (영문 숫자만)
+// category 색상 고르기 위 분류 탭 이름 (같은 이름끼리 한 탭에 모임, 탭 순서는 목록에 처음 나온 순서)
 // image   tiles 폴더의 제품 이미지 (타일 한 장을 위에서 정면으로 찍은 이미지, tiles4 가 없을 때 씀)
 // tiles4  tiles4 폴더의 무늬 4장 세트 (서로 다른 무늬 4장을 2×2로 줄눈 없이 붙인 이미지, 바닥에 4장을 무작위로 섞어 깖)
 // thumb   thumbs 폴더의 작은 미리보기 이미지 (색상 고르기 칸에 보임)
@@ -14,6 +15,7 @@ window.PRODUCTS = [
   {
     name: "NPT16252",
     code: "NPT16252",
+    category: "기본형",
     image: "tiles/tile-01.jpg",
     tiles4: "tiles4/NPT16252.jpg",
     thumb: "thumbs/NPT16252.jpg",
@@ -25,6 +27,7 @@ window.PRODUCTS = [
   {
     name: "NPT16272",
     code: "NPT16272",
+    category: "기본형",
     image: "tiles/tile-02.jpg",
     tiles4: "tiles4/NPT16272.jpg",
     thumb: "thumbs/NPT16272.jpg",
@@ -36,6 +39,7 @@ window.PRODUCTS = [
   {
     name: "NPT16282",
     code: "NPT16282",
+    category: "기본형",
     image: "tiles/tile-03.jpg",
     tiles4: "tiles4/NPT16282.jpg",
     thumb: "thumbs/NPT16282.jpg",
@@ -47,6 +51,7 @@ window.PRODUCTS = [
   {
     name: "NPT16302",
     code: "NPT16302",
+    category: "기본형",
     image: "tiles/tile-04.jpg",
     tiles4: "tiles4/NPT16302.jpg",
     thumb: "thumbs/NPT16302.jpg",
@@ -58,6 +63,7 @@ window.PRODUCTS = [
   {
     name: "NPT16312",
     code: "NPT16312",
+    category: "기본형",
     image: "tiles/tile-05.jpg",
     tiles4: "tiles4/NPT16312.jpg",
     thumb: "thumbs/NPT16312.jpg",
@@ -69,6 +75,7 @@ window.PRODUCTS = [
   {
     name: "NPT16320",
     code: "NPT16320",
+    category: "기본형",
     image: "tiles/tile-06.jpg",
     tiles4: "tiles4/NPT16320.jpg",
     thumb: "thumbs/NPT16320.jpg",
@@ -80,6 +87,7 @@ window.PRODUCTS = [
   {
     name: "NPT16332",
     code: "NPT16332",
+    category: "기본형",
     image: "tiles/tile-07.jpg",
     tiles4: "tiles4/NPT16332.jpg",
     thumb: "thumbs/NPT16332.jpg",
@@ -91,6 +99,7 @@ window.PRODUCTS = [
   {
     name: "NPT16342",
     code: "NPT16342",
+    category: "기본형",
     image: "tiles/tile-08.jpg",
     tiles4: "tiles4/NPT16342.jpg",
     thumb: "thumbs/NPT16342.jpg",
@@ -102,6 +111,7 @@ window.PRODUCTS = [
   {
     name: "NPT16352",
     code: "NPT16352",
+    category: "기본형",
     image: "tiles/tile-09.jpg",
     tiles4: "tiles4/NPT16352.jpg",
     thumb: "thumbs/NPT16352.jpg",
@@ -113,6 +123,7 @@ window.PRODUCTS = [
   {
     name: "NPT16362",
     code: "NPT16362",
+    category: "기본형",
     image: "tiles/tile-10.jpg",
     tiles4: "tiles4/NPT16362.jpg",
     thumb: "thumbs/NPT16362.jpg",
@@ -124,6 +135,7 @@ window.PRODUCTS = [
   {
     name: "NPT16372",
     code: "NPT16372",
+    category: "기본형",
     image: "tiles/tile-11.jpg",
     tiles4: "tiles4/NPT16372.jpg",
     thumb: "thumbs/NPT16372.jpg",
@@ -135,6 +147,7 @@ window.PRODUCTS = [
   {
     name: "NPT16382",
     code: "NPT16382",
+    category: "기본형",
     image: "tiles/tile-12.jpg",
     tiles4: "tiles4/NPT16382.jpg",
     thumb: "thumbs/NPT16382.jpg",
@@ -146,6 +159,7 @@ window.PRODUCTS = [
   {
     name: "NPT16882",
     code: "NPT16882",
+    category: "기본형",
     image: "tiles/NPT16882.jpg",
     tiles4: "tiles4/NPT16882.jpg",
     thumb: "thumbs/NPT16882.jpg",
@@ -157,9 +171,82 @@ window.PRODUCTS = [
   {
     name: "NPT16992",
     code: "NPT16992",
+    category: "기본형",
     image: "tiles/NPT16992.jpg",
     tiles4: "tiles4/NPT16992.jpg",
     thumb: "thumbs/NPT16992.jpg",
+    width: 600,
+    height: 600,
+    pattern: "grid",
+    url: ""
+  },
+  {
+    name: "NEH26132",
+    code: "NEH26132",
+    category: "뉴에코홈 저수축",
+    image: "tiles/NEH26132.jpg",
+    tiles4: "tiles4/NEH26132.jpg",
+    thumb: "thumbs/NEH26132.jpg",
+    width: 600,
+    height: 600,
+    pattern: "grid",
+    url: ""
+  },
+  {
+    name: "NEH26142",
+    code: "NEH26142",
+    category: "뉴에코홈 저수축",
+    image: "tiles/NEH26142.jpg",
+    tiles4: "tiles4/NEH26142.jpg",
+    thumb: "thumbs/NEH26142.jpg",
+    width: 600,
+    height: 600,
+    pattern: "grid",
+    url: ""
+  },
+  {
+    name: "NEH26162",
+    code: "NEH26162",
+    category: "뉴에코홈 저수축",
+    image: "tiles/NEH26162.jpg",
+    tiles4: "tiles4/NEH26162.jpg",
+    thumb: "thumbs/NEH26162.jpg",
+    width: 600,
+    height: 600,
+    pattern: "grid",
+    url: ""
+  },
+  {
+    name: "NEH26172",
+    code: "NEH26172",
+    category: "뉴에코홈 저수축",
+    image: "tiles/NEH26172.jpg",
+    tiles4: "tiles4/NEH26172.jpg",
+    thumb: "thumbs/NEH26172.jpg",
+    width: 600,
+    height: 600,
+    pattern: "grid",
+    url: ""
+  },
+  {
+    name: "NEH26182",
+    code: "NEH26182",
+    category: "뉴에코홈 저수축",
+    image: "tiles/NEH26182.jpg",
+    tiles4: "tiles4/NEH26182.jpg",
+    thumb: "thumbs/NEH26182.jpg",
+    width: 600,
+    height: 600,
+    pattern: "grid",
+    url: ""
+  },
+  {
+    name: "NEH26192",
+    code: "NEH26192",
+    category: "뉴에코홈 저수축",
+    image: "tiles/NEH26192.jpg",
+    tiles4: "tiles4/NEH26192.jpg",
+    thumb: "thumbs/NEH26192.jpg",
     width: 600,
     height: 600,
     pattern: "grid",
