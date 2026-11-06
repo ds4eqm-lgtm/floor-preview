@@ -241,10 +241,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.06b"></script>
-<script src="refine.js?v=2026.11.06b"></script>
-<script src="orient.js?v=2026.11.06b"></script>
-<script src="camera.js?v=2026.11.06b"></script>
+<script src="products.js?v=2026.11.06c"></script>
+<script src="refine.js?v=2026.11.06c"></script>
+<script src="orient.js?v=2026.11.06c"></script>
+<script src="camera.js?v=2026.11.06c"></script>
 <script>
 (function(){
 "use strict";
@@ -260,7 +260,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.06b";
+const VERSION="2026.11.06c";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -410,6 +410,27 @@ function upload(name,src,mip){
   else gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
 }
 
+/* 밝은 색 예쁘게: 방 밝기에 맞추면 흰색, 크림색 계열이 칙칙해 보여서, 밝은 색일수록 더 밝혀 줌
+   짙은 색은 그대로, 바닥이 제품 원래 색보다 밝아지지는 않게 상한 */
+const BRIGHT_LIFT=1.42;
+function layersLum(layers){
+  try{
+    const c=document.createElement("canvas");c.width=c.height=16;const x=c.getContext("2d",{willReadFrequently:true});
+    let s=0,n=0;
+    for(const l of layers){x.clearRect(0,0,16,16);x.drawImage(l,0,0,16,16);const d=x.getImageData(0,0,16,16).data;
+      for(let i=0;i<d.length;i+=4){s+=(.2126*d[i]+.7152*d[i+1]+.0722*d[i+2])/255;n++;}}
+    return n?s/n:.5;
+  }catch(e){return .5;}
+}
+function brightLift(ex){
+  const L=S.tileLum==null?.5:S.tileLum,t=Math.max(0,Math.min(1,(L-.45)/.4)),t2=t*t*(3-2*t);
+  let lf=1+(BRIGHT_LIFT-1)*t2;
+  /* 바닥 가운데 밝기(선형)가 원래 색의 0.9배(화면 밝기로 약 95퍼센트)를 넘지 않게 */
+  const el=.2126*ex[0]+.7152*ex[1]+.0722*ex[2];
+  if(el>0)lf=Math.min(lf,Math.max(1,.9/el));
+  return lf;
+}
+
 /* 데코타일 무늬 여러 장을 한 텍스처 배열로 (장마다 따로 축소본을 만들어 이웃 무늬가 번지지 않음) */
 function uploadTileLayers(layers){
   const unit=TEXN.indexOf("tile"),w=layers[0].width,h=layers[0].height,n=layers.length,T=gl.TEXTURE_2D_ARRAY;
@@ -463,7 +484,8 @@ function draw(){
   gl.uniform1f(U.uRot,S.rot*Math.PI/180);
   gl.uniform1f(U.uShadeAmt,S.shade);
   const ex=S.expo||[1,1,1],bk=S.bright||1;
-  gl.uniform3f(U.uExpo,ex[0]*bk,ex[1]*bk,ex[2]*bk);
+  const lf=brightLift(ex);
+  gl.uniform3f(U.uExpo,ex[0]*bk*lf,ex[1]*bk*lf,ex[2]*bk*lf);
   gl.uniform1f(U.uNoise,S.noise||0);
   gl.uniform1f(U.uSplit,S.compare?S.split:-1);
   gl.uniform1f(U.uMaskView,S.brush?1:0);
@@ -1070,7 +1092,7 @@ function selectProduct(i){
   }
   $("pName").textContent=p.name;$("pSpec").textContent=specText(p);
   const a=$("pLink");if(p.url){a.href=p.url;a.hidden=false;}else a.hidden=true;
-  const done=layers=>{if(S.product!==p)return;S.tileLayers=layers;uploadTileLayers(layers);S.tileReady=true;render();};
+  const done=layers=>{if(S.product!==p)return;S.tileLayers=layers;S.tileLum=layersLum(layers);uploadTileLayers(layers);S.tileReady=true;render();};
   /* 무늬 4장 세트(tiles4)가 있으면 4장을 섞어 깔고, 없으면 한 장으로 */
   const load=(src,isSet,isPlank)=>{
     if(tileCache.has(src)){const v=tileCache.get(src);cacheTile(src,v);return done(v);}
