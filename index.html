@@ -225,10 +225,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.05a"></script>
-<script src="refine.js?v=2026.11.05a"></script>
-<script src="orient.js?v=2026.11.05a"></script>
-<script src="camera.js?v=2026.11.05a"></script>
+<script src="products.js?v=2026.11.06a"></script>
+<script src="refine.js?v=2026.11.06a"></script>
+<script src="orient.js?v=2026.11.06a"></script>
+<script src="camera.js?v=2026.11.06a"></script>
 <script>
 (function(){
 "use strict";
@@ -244,7 +244,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.05a";
+const VERSION="2026.11.06a";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -346,7 +346,7 @@ void main(){
     srgb+=uNoise*(vec3(g0*2.45)+gc*.5);
     col=mix(photo,srgb,m);
     if(uGrid>0.){
-      vec2 g=P/600.;
+      vec2 g=P/uTileMM;
       vec2 gd=abs(fract(g-.5)-.5)/max(fwidth(g),vec2(1e-5));
       gridLine=(1.-clamp(min(gd.x,gd.y)-.5,0.,1.))*clamp(1.-max(fwidth(g).x,fwidth(g).y)*6.,0.,1.);
     }
