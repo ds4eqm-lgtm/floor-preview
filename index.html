@@ -34,6 +34,16 @@ h1{font-size:21px;letter-spacing:-.03em;margin:0;font-weight:750;text-wrap:balan
 #view{display:block;max-width:100%;max-height:68vh;width:auto;height:auto;touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .stage.drawing #view,.stage.comparing #view{touch-action:none;cursor:crosshair}
 .stage.comparing #view{cursor:ew-resize}
+/* 확대 */
+.stage.zoomed #view{touch-action:none;cursor:grab}
+.stage.zoomed.drawing #view{cursor:crosshair}
+.stage.zoomed.comparing #view{cursor:ew-resize}
+.zoombar{position:absolute;right:10px;bottom:10px;display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(18,20,19,.66);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);z-index:3}
+.zoombar button{min-height:0;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:transparent;color:#fff}
+.zoombar button svg{width:18px;height:18px}
+.zoombar button:disabled{opacity:.35}
+.zoombar .zr{width:auto;padding:0 12px;border-radius:999px;font-size:12.5px;font-weight:650;background:rgba(255,255,255,.16)}
+#zLevel{min-width:34px;text-align:center;font-size:12.5px;font-weight:650;font-variant-numeric:tabular-nums}
 .chip{position:absolute;left:10px;top:10px;background:rgba(15,17,16,.78);color:#f2f4f2;font-size:13px;padding:6px 11px;border-radius:999px;display:flex;align-items:center;gap:8px;max-width:calc(100% - 20px)}
 .dot{width:8px;height:8px;border-radius:50%;background:#8fd1b9;flex:none}
 .chip.busy .dot{animation:pulse 1s ease-in-out infinite}
@@ -136,6 +146,12 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
         <div class="split" id="split" hidden></div>
         <span class="tag l" id="tagL" hidden>지금 바닥</span>
         <span class="tag r" id="tagR" hidden>시공 후</span>
+        <div class="zoombar" id="zoombar" role="group" aria-label="확대">
+          <button type="button" id="zOut" aria-label="축소" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 12h12"/></svg></button>
+          <span id="zLevel" aria-live="polite">1배</span>
+          <button type="button" id="zIn" aria-label="확대"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 12h12M12 6v12"/></svg></button>
+          <button type="button" id="zReset" class="zr" hidden>전체 보기</button>
+        </div>
       </div>
       <div class="upload">
         <label class="btn primary" for="fileCam">
@@ -225,10 +241,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.06a"></script>
-<script src="refine.js?v=2026.11.06a"></script>
-<script src="orient.js?v=2026.11.06a"></script>
-<script src="camera.js?v=2026.11.06a"></script>
+<script src="products.js?v=2026.11.06b"></script>
+<script src="refine.js?v=2026.11.06b"></script>
+<script src="orient.js?v=2026.11.06b"></script>
+<script src="camera.js?v=2026.11.06b"></script>
 <script>
 (function(){
 "use strict";
@@ -244,7 +260,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.06a";
+const VERSION="2026.11.06b";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -266,7 +282,8 @@ const S={
   cctEst:null,cctSet:null,wb:[1,1,1],
   undo:[],aiBusy:false,aiTok:0,
   /* 사진을 새로 띄울 때마다 1씩 올라가는 번호: 늦게 끝난 예전 작업이 지금 사진을 덮어쓰지 못하게 */
-  loadToken:0,histId:null
+  loadToken:0,histId:null,
+  zoom:1,zx:.5,zy:.5,zoomCss:null,fullRender:false
 };
 function newLoad(){S.loadToken++;return S.loadToken;}
 
@@ -298,11 +315,13 @@ uniform vec2 uSize,uMaskTexel,uTileMM;
 uniform vec3 uH0,uH1,uH2;
 uniform int uPattern;
 uniform float uRot,uShadeAmt,uSplit,uMaskView,uGrid,uHasTile;
+/* 확대: 화면에 보이는 사진 부분 (왼쪽 위 u, v 와 폭, 높이, 사진 좌표 0~1) */
+uniform vec4 uView;
 in vec2 vUv;out vec4 o;
 float h2(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float h1(float x){return fract(sin(x*91.345+3.17)*47453.123);}
 void main(){
-  vec2 uv=vUv;
+  vec2 uv=uView.xy+vUv*uView.zw;
   vec3 photo=texture(uPhoto,uv).rgb;
   float m=0.;
   for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++)m+=texture(uMask,uv+vec2(float(i),float(j))*uMaskTexel).r;
@@ -317,7 +336,8 @@ void main(){
     P=vec2(c*P.x+s*P.y,-s*P.x+c*P.y);
     vec2 sz=uTileMM;
     float row=floor(P.y/sz.y);
-    float off=uPattern==1?h1(row)*sz.x:(uPattern==2?mod(row,2.)*.5*sz.x:0.);
+    /* 엇갈림(우드): 옆 줄과 이음매가 너무 가깝지 않게 줄마다 약 0.38장씩 밀고 조금 흔듦 */
+    float off=uPattern==1?fract(row*.381966+h1(row)*.22)*sz.x:(uPattern==2?mod(row,2.)*.5*sz.x:0.);
     vec2 cf=vec2(P.x+off,P.y)/sz;
     vec2 cell=floor(cf);
     vec2 lc=cf-cell;
@@ -340,7 +360,7 @@ void main(){
     lin*=uExpo*mix(1.,sh*ao,uShadeAmt);
     vec3 srgb=pow(max(lin,vec3(0.)),vec3(1./2.2));
     /* 사진과 같은 정도의 자글자글한 노이즈 (매끈한 CG 느낌 없애기) */
-    vec2 fc=gl_FragCoord.xy;
+    vec2 fc=floor(uv*uSize)+.5;
     float g0=h2(fc*1.013+vec2(3.1,7.7))+h2(fc*.987+vec2(9.3,1.9))-1.;
     vec3 gc=vec3(h2(fc+vec2(11.,5.)),h2(fc+vec2(2.,19.)),h2(fc+vec2(7.,3.)))-.5;
     srgb+=uNoise*(vec3(g0*2.45)+gc*.5);
@@ -368,7 +388,7 @@ function initGL(){
   const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   const loc=gl.getAttribLocation(prog,"p");gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-  ["uPhoto","uMask","uShade","uTile","uAO","uExpo","uWB","uNoise","uSize","uMaskTexel","uTileMM","uLayers","uH0","uH1","uH2","uPattern","uRot","uShadeAmt","uSplit","uMaskView","uGrid","uHasTile"].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
+  ["uPhoto","uMask","uShade","uTile","uAO","uExpo","uWB","uNoise","uSize","uMaskTexel","uTileMM","uLayers","uH0","uH1","uH2","uPattern","uRot","uShadeAmt","uSplit","uMaskView","uGrid","uHasTile","uView"].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
   TEXN.forEach((n,i)=>{TEX[n]=gl.createTexture();gl.uniform1i(U[n==="ao"?"uAO":"u"+n[0].toUpperCase()+n.slice(1)],i);});
   const one=document.createElement("canvas");one.width=one.height=1;const ox=one.getContext("2d");ox.fillStyle="#fff";ox.fillRect(0,0,1,1);
   upload("ao",one,false);
@@ -423,7 +443,15 @@ let raf=0;
 function render(){if(!raf)raf=requestAnimationFrame(draw);}
 function draw(){
   raf=0;if(!gl||!S.W||gl.isContextLost())return;
-  gl.viewport(0,0,S.W,S.H);
+  let vw=S.W,vh=S.H,zw={u0:0,v0:0,w:1};
+  if(S.zoom>1&&!S.fullRender&&S.zoomCss){
+    zw=zoomWin();
+    const d=Math.min(3,window.devicePixelRatio||1);vw=Math.round(S.zoomCss.w*d);vh=Math.round(S.zoomCss.h*d);
+    const cap=2048/Math.max(vw,vh);if(cap<1){vw=Math.round(vw*cap);vh=Math.round(vh*cap);}
+  }
+  if(view.width!==vw||view.height!==vh){view.width=vw;view.height=vh;}
+  gl.viewport(0,0,vw,vh);
+  gl.uniform4f(U.uView,zw.u0,zw.v0,zw.w,zw.w);
   const [R0,R1,R2]=homography();
   gl.uniform3fv(U.uH0,R0);gl.uniform3fv(U.uH1,R1);gl.uniform3fv(U.uH2,R2);
   gl.uniform2f(U.uSize,S.W,S.H);
@@ -452,6 +480,7 @@ function setPhoto(img,skipLight){
   const c=document.createElement("canvas");c.width=w;c.height=h;
   /* 사진 캔버스는 CPU 쪽에 둠: 밝기, 바닥 찾기에서 여러 번 읽는데 그래픽 칩에서 매번 꺼내 오면 느림 */
   const x=c.getContext("2d",{willReadFrequently:true});x.imageSmoothingQuality="high";x.drawImage(img,0,0,w,h);
+  resetZoom(true);
   S.photoCanvas=c;S.photoPx=null;S.W=w;S.H=h;view.width=w;view.height=h;
   /* 새 사진: 화각, 카메라 높이, AI 지도는 이 사진 기준으로 다시 */
   S.fov=0;S.lensInfo="";S.camH=1400;S.camInfo="";S.sem=null;
@@ -931,7 +960,8 @@ function calibrateScale(){
 /* ---------- 제품 ---------- */
 function specText(p){
   const pat={stagger:"엇갈림 시공",half:"반장 엇갈림 시공",grid:"바둑판 시공"}[p.pattern]||"";
-  return (+p.width)+" × "+(+p.height)+" mm"+(pat?" · "+pat:"");
+  const a=+p.width,b=+p.height;
+  return Math.min(a,b)+" × "+Math.max(a,b)+" mm"+(pat?" · "+pat:"");
 }
 /* 분류 탭: products.js 의 category 이름별로 (처음 나온 순서) */
 function catOf(p){return String((p&&p.category)||"기본형");}
@@ -981,6 +1011,19 @@ function splitSet(img){
     try{return flattenTile(c);}catch(e){return c;}
   });
 }
+/* 우드 판재 묶음: 판재를 긴 쪽이 가로가 되게 위아래로 쌓은 이미지 → 한 장씩 (판재 자체 밝기 차이는 자연스러워서 그대로 둠) */
+function splitPlanks(img,p){
+  const W=img.naturalWidth||img.width,H=img.naturalHeight||img.height;
+  const ch=W*(+p.height||184)/(+p.width||950),n=Math.max(1,Math.min(16,Math.round(H/ch))),h=H/n;
+  const L=Math.min(1024,W),lh=Math.max(8,Math.round(L*h/W));
+  const out=[];
+  for(let k=0;k<n;k++){
+    const c=document.createElement("canvas");c.width=L;c.height=lh;
+    const x=c.getContext("2d");x.imageSmoothingQuality="high";
+    x.drawImage(img,0,k*h+1,W,h-2,0,0,L,lh);out.push(c);
+  }
+  return out;
+}
 /* 제품 사진에 들어 있는 큰 밝기 기울기(조명, 비네팅)를 펴서, 타일마다 같은 그림자가 반복돼 보이지 않게 함
    무늬는 그대로 두고 아주 완만한 밝기 변화(2차 곡면)만 빼냄 */
 function flattenTile(img){
@@ -1029,16 +1072,16 @@ function selectProduct(i){
   const a=$("pLink");if(p.url){a.href=p.url;a.hidden=false;}else a.hidden=true;
   const done=layers=>{if(S.product!==p)return;S.tileLayers=layers;uploadTileLayers(layers);S.tileReady=true;render();};
   /* 무늬 4장 세트(tiles4)가 있으면 4장을 섞어 깔고, 없으면 한 장으로 */
-  const load=(src,isSet)=>{
+  const load=(src,isSet,isPlank)=>{
     if(tileCache.has(src)){const v=tileCache.get(src);cacheTile(src,v);return done(v);}
     const img=new Image();
     img.onload=()=>{let layers;
-      try{layers=isSet?splitSet(img):[flattenTile(img)];}catch(e){console.warn("tile prep failed",e);const c=document.createElement("canvas");c.width=img.naturalWidth;c.height=img.naturalHeight;c.getContext("2d").drawImage(img,0,0);layers=[c];}
+      try{layers=isPlank?splitPlanks(img,p):isSet?splitSet(img):[flattenTile(img)];}catch(e){console.warn("tile prep failed",e);const c=document.createElement("canvas");c.width=img.naturalWidth;c.height=img.naturalHeight;c.getContext("2d").drawImage(img,0,0);layers=[c];}
       cacheTile(src,layers);done(layers);};
-    img.onerror=()=>{if(isSet&&p.image)load(p.image,false);else chip("제품 이미지를 못 불러왔어요: "+src,"warn");};
+    img.onerror=()=>{if((isSet||isPlank)&&p.image)load(p.image,false);else chip("제품 이미지를 못 불러왔어요: "+src,"warn");};
     img.src=bust(src);
   };
-  if(p.tiles4)load(p.tiles4,true);else load(p.image,false);
+  if(p.planks)load(p.planks,false,true);else if(p.tiles4)load(p.tiles4,true);else load(p.image,false);
 }
 
 /* ---------- 사진 올리기 ---------- */
@@ -1337,8 +1380,9 @@ function setCompare(on){
 }
 function updateSplitUI(){
   if(!S.compare)return;
-  const st=$("stage").getBoundingClientRect(),r=view.getBoundingClientRect();
-  $("split").style.left=(r.left-st.left+r.width*S.split-1)+"px";
+  const st=$("stage").getBoundingClientRect(),r=view.getBoundingClientRect(),z=zoomWin();
+  const fx=(S.split-z.u0)/z.w;$("split").style.visibility=fx<0||fx>1?"hidden":"visible";
+  $("split").style.left=(r.left-st.left+r.width*Math.max(0,Math.min(1,fx))-1)+"px";
   $("split").style.top=(r.top-st.top)+"px";$("split").style.bottom="auto";$("split").style.height=r.height+"px";
 }
 function setBrush(on){
@@ -1376,22 +1420,99 @@ function initCT(){
   ctUI();
 }
 
-/* ---------- 손가락 입력: 붓, 비교선 ---------- */
+/* ---------- 확대 ----------
+   S.zoom 배율, (S.zx, S.zy) 화면 가운데가 사진 어디인지 (0~1)
+   확대하면 보이는 부분만 화면 해상도로 다시 그려서 바닥 무늬가 흐려지지 않음 */
+const ZMAX=6;
+function zoomWin(){
+  const w=1/S.zoom;let u0=S.zx-w/2,v0=S.zy-w/2;
+  u0=Math.max(0,Math.min(1-w,u0));v0=Math.max(0,Math.min(1-w,v0));
+  S.zx=u0+w/2;S.zy=v0+w/2;return {u0,v0,w};
+}
+function zoomUI(){
+  const z=S.zoom||1;
+  $("zLevel").textContent=(Math.round(z*10)/10).toString().replace(/\.0$/,"")+"배";
+  $("zOut").disabled=z<=1.001;$("zIn").disabled=z>=ZMAX-.001;$("zReset").hidden=z<=1.001;
+  $("stage").classList.toggle("zoomed",z>1.001);
+}
+function resetZoom(silent){
+  S.zoom=1;S.zx=.5;S.zy=.5;S.zoomCss=null;view.style.width="";view.style.height="";
+  if(!silent){zoomUI();updateSplitUI();render();}else{try{zoomUI();}catch(e){}}
+}
+/* fx, fy: 화면에서 고정할 점 (보이는 그림 안 0~1) */
+function setZoom(z,fx,fy){
+  if(!S.W)return;
+  z=Math.max(1,Math.min(ZMAX,z));
+  if(z<=1.001){resetZoom();return;}
+  if(!(S.zoom>1)){const r=view.getBoundingClientRect();S.zoomCss={w:r.width,h:r.height};view.style.width=r.width+"px";view.style.height=r.height+"px";S.zoom=1;S.zx=.5;S.zy=.5;}
+  if(fx==null){fx=.5;fy=.5;}
+  const a=zoomWin(),au=a.u0+fx*a.w,av=a.v0+fy*a.w,w=1/z;
+  S.zoom=z;S.zx=au-fx*w+w/2;S.zy=av-fy*w+w/2;zoomWin();
+  zoomUI();updateSplitUI();render();
+  if(!S.zoomHinted){S.zoomHinted=true;chip("손가락으로 끌면 옮겨지고, 두 번 톡 치면 원래대로 돌아가요","");}
+}
+function panBy(dxCss,dyCss){
+  if(!(S.zoom>1)||!S.zoomCss)return;
+  const w=1/S.zoom;S.zx-=dxCss/S.zoomCss.w*w;S.zy-=dyCss/S.zoomCss.h*w;zoomWin();updateSplitUI();render();
+}
+/* 화면 좌표 → 사진 좌표(0~1) */
+function toUV(e){
+  const r=view.getBoundingClientRect(),z=zoomWin();
+  return {u:z.u0+(e.clientX-r.left)/r.width*z.w,v:z.v0+(e.clientY-r.top)/r.height*z.w,fx:(e.clientX-r.left)/r.width,fy:(e.clientY-r.top)/r.height};
+}
+$("zIn").onclick=()=>setZoom((S.zoom||1)*1.6);
+$("zOut").onclick=()=>setZoom((S.zoom||1)/1.6);
+$("zReset").onclick=()=>resetZoom();
+
+/* ---------- 손가락 입력: 붓, 비교선, 확대(두 손가락 벌리기, 두 번 톡), 옮기기 ---------- */
 let drawing=false,lastPt=null;
-function toImg(e){const r=view.getBoundingClientRect();return {x:(e.clientX-r.left)/r.width*S.W,y:(e.clientY-r.top)/r.height*S.H,k:S.W/r.width};}
+const ptrs=new Map();let pinch=null,panPt=null,lastTap=null;
+function toImg(e){const r=view.getBoundingClientRect(),t=toUV(e),w=1/(S.zoom||1);return {x:t.u*S.W,y:t.v*S.H,k:S.W*w/r.width};}
 function stamp(x,y,rad){
   const c=S.maskCtx,col=S.brushAdd?"255,255,255":"0,0,0";
   const g=c.createRadialGradient(x,y,rad*.55,x,y,rad);g.addColorStop(0,"rgba("+col+",1)");g.addColorStop(1,"rgba("+col+",0)");
   c.fillStyle=g;c.beginPath();c.arc(x,y,rad,0,Math.PI*2);c.fill();
 }
+function pinchInfo(){
+  const a=[...ptrs.values()];const r=view.getBoundingClientRect();
+  return {d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),mx:(a[0].x+a[1].x)/2,my:(a[0].y+a[1].y)/2,r};
+}
 view.addEventListener("pointerdown",e=>{
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){
+    /* 두 손가락: 붓질, 비교선 끌기는 멈추고 확대로 */
+    if(drawing&&S.brush&&S.undo.length){S.maskCtx.putImageData(S.undo.pop(),0,0);uploadMask();}
+    drawing=false;panPt=null;
+    const p=pinchInfo();pinch={d0:p.d,z0:S.zoom||1,mx:p.mx,my:p.my};
+    try{view.setPointerCapture(e.pointerId);}catch(_){}
+    e.preventDefault();return;
+  }
+  if(ptrs.size>2)return;
   if(S.brush){
     drawing=true;view.setPointerCapture(e.pointerId);
     S.undo.push(S.maskCtx.getImageData(0,0,S.W,S.H));if(S.undo.length>8)S.undo.shift();
     const p=toImg(e);lastPt=p;stamp(p.x,p.y,S.brushSize/2*p.k);uploadMask();render();e.preventDefault();
   }else if(S.compare){drawing=true;view.setPointerCapture(e.pointerId);moveSplit(e);e.preventDefault();}
+  else if(S.zoom>1){panPt={x:e.clientX,y:e.clientY,moved:0};view.setPointerCapture(e.pointerId);e.preventDefault();}
+  else panPt={x:e.clientX,y:e.clientY,moved:0,still:true};
 });
 view.addEventListener("pointermove",e=>{
+  if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&ptrs.size===2){
+    const p=pinchInfo();
+    const fx=(pinch.mx-p.r.left)/p.r.width,fy=(pinch.my-p.r.top)/p.r.height;
+    if(p.d>0&&pinch.d0>0){
+      const z=Math.max(1,Math.min(ZMAX,pinch.z0*p.d/pinch.d0));
+      if(Math.abs(z-(S.zoom||1))>.01)setZoom(z,fx,fy);
+    }
+    panBy(p.mx-pinch.mx,p.my-pinch.my);pinch.mx=p.mx;pinch.my=p.my;
+    e.preventDefault();return;
+  }
+  if(panPt){
+    const dx=e.clientX-panPt.x,dy=e.clientY-panPt.y;panPt.moved+=Math.hypot(dx,dy);
+    if(!panPt.still){panBy(dx,dy);panPt.x=e.clientX;panPt.y=e.clientY;}
+    return;
+  }
   if(!drawing)return;
   if(S.brush){
     const p=toImg(e),rad=S.brushSize/2*p.k,dx=p.x-lastPt.x,dy=p.y-lastPt.y,dist=Math.hypot(dx,dy),step=Math.max(1,rad/4);
@@ -1400,14 +1521,35 @@ view.addEventListener("pointermove",e=>{
     uploadMask();render();
   }else if(S.compare)moveSplit(e);
 });
-["pointerup","pointercancel"].forEach(t=>view.addEventListener(t,()=>{drawing=false;}));
-function moveSplit(e){const r=view.getBoundingClientRect();S.split=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));updateSplitUI();render();}
-window.addEventListener("resize",updateSplitUI);
+function endPtr(e){
+  const wasPan=panPt;ptrs.delete(e.pointerId);
+  if(ptrs.size<2&&pinch){pinch=null;lastTap=null;if(ptrs.size===1&&S.zoom>1){const a=[...ptrs.values()][0];panPt={x:a.x,y:a.y,moved:99};}else panPt=null;drawing=false;return;}
+  drawing=false;panPt=null;
+  /* 두 번 톡: 붓, 비교 중이 아닐 때 그 자리 2.5배, 확대돼 있으면 원래대로 */
+  if(e.type==="pointerup"&&wasPan&&wasPan.moved<12&&!S.brush&&!S.compare){
+    const now=performance.now();
+    if(lastTap&&now-lastTap.t<320&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<30){
+      lastTap=null;
+      if(S.zoom>1)resetZoom();else{const t=toUV(e);setZoom(2.5,t.fx,t.fy);}
+    }else lastTap={t:now,x:e.clientX,y:e.clientY};
+  }
+}
+["pointerup","pointercancel"].forEach(t=>view.addEventListener(t,endPtr));
+/* 컴퓨터: 확대된 상태에선 휠로, 아니면 Ctrl+휠(노트북 터치패드 벌리기)로만 확대 (그냥 휠은 페이지 내리기) */
+view.addEventListener("wheel",e=>{
+  if(!S.W)return;
+  if(!(S.zoom>1)&&!e.ctrlKey)return;
+  e.preventDefault();
+  const t=toUV(e);setZoom((S.zoom||1)*Math.exp(-e.deltaY*(e.ctrlKey?.01:.0025)),t.fx,t.fy);
+},{passive:false});
+function moveSplit(e){const t=toUV(e);S.split=Math.max(0,Math.min(1,t.u));updateSplitUI();render();}
+let lastW=window.innerWidth;
+window.addEventListener("resize",()=>{if(Math.abs(window.innerWidth-lastW)>40&&S.zoom>1){lastW=window.innerWidth;resetZoom();}else updateSplitUI();});
 
 /* ---------- 저장 ---------- */
 $("tSave").onclick=async()=>{
   if(!S.W)return;
-  const wasCmp=S.compare,wasB=S.brush;S.compare=false;S.brush=false;draw();
+  const wasCmp=S.compare,wasB=S.brush;S.compare=false;S.brush=false;S.fullRender=true;draw();S.fullRender=false;
   const c=document.createElement("canvas");c.width=S.W;c.height=S.H;const x=c.getContext("2d");x.drawImage(view,0,0);
   S.compare=wasCmp;S.brush=wasB;render();
   const fs=Math.max(14,Math.round(S.W/42)),pad=Math.round(fs*.8);

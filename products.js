@@ -4,6 +4,7 @@
 // code    주소 뒤에 ?item=코드 붙이면 그 제품이 먼저 선택됨 (영문 숫자만)
 // category 색상 고르기 위 분류 탭 이름 (같은 이름끼리 한 탭에 모임, 탭 순서는 목록에 처음 나온 순서)
 // image   tiles 폴더의 제품 이미지 (타일 한 장을 위에서 정면으로 찍은 이미지, tiles4 가 없을 때 씀)
+// planks  planks 폴더의 우드 판재 묶음 (판재 여러 장을 긴 쪽이 가로가 되게 위아래로 쌓은 이미지, 판재마다 무작위로 골라 엇갈려 깖)
 // tiles4  tiles4 폴더의 무늬 4장 세트 (서로 다른 무늬 4장을 2×2로 줄눈 없이 붙인 이미지, 바닥에 4장을 무작위로 섞어 깖)
 // thumb   thumbs 폴더의 작은 미리보기 이미지 (색상 고르기 칸에 보임)
 // width   타일 가로 실제 길이 mm
@@ -490,6 +491,114 @@ window.PRODUCTS = [
     width: 450,
     height: 450,
     pattern: "grid",
+    url: ""
+  },
+  {
+    name: "NPW08392",
+    code: "NPW08392",
+    category: "우드",
+    image: "tiles/NPW08392.jpg",
+    planks: "planks/NPW08392.jpg",
+    thumb: "thumbs/NPW08392.jpg",
+    width: 950,
+    height: 184,
+    pattern: "stagger",
+    url: ""
+  },
+  {
+    name: "NPW08452",
+    code: "NPW08452",
+    category: "우드",
+    image: "tiles/NPW08452.jpg",
+    planks: "planks/NPW08452.jpg",
+    thumb: "thumbs/NPW08452.jpg",
+    width: 950,
+    height: 184,
+    pattern: "stagger",
+    url: ""
+  },
+  {
+    name: "NPW10032",
+    code: "NPW10032",
+    category: "우드",
+    image: "tiles/NPW10032.jpg",
+    planks: "planks/NPW10032.jpg",
+    thumb: "thumbs/NPW10032.jpg",
+    width: 950,
+    height: 184,
+    pattern: "stagger",
+    url: ""
+  },
+  {
+    name: "NPW10042",
+    code: "NPW10042",
+    category: "우드",
+    image: "tiles/NPW10042.jpg",
+    planks: "planks/NPW10042.jpg",
+    thumb: "thumbs/NPW10042.jpg",
+    width: 950,
+    height: 184,
+    pattern: "stagger",
+    url: ""
+  },
+  {
+    name: "NPW10072",
+    code: "NPW10072",
+    category: "우드",
+    image: "tiles/NPW10072.jpg",
+    planks: "planks/NPW10072.jpg",
+    thumb: "thumbs/NPW10072.jpg",
+    width: 950,
+    height: 184,
+    pattern: "stagger",
+    url: ""
+  },
+  {
+    name: "NPW12012",
+    code: "NPW12012",
+    category: "우드",
+    image: "tiles/NPW12012.jpg",
+    planks: "planks/NPW12012.jpg",
+    thumb: "thumbs/NPW12012.jpg",
+    width: 950,
+    height: 184,
+    pattern: "stagger",
+    url: ""
+  },
+  {
+    name: "NPW61212",
+    code: "NPW61212",
+    category: "우드",
+    image: "tiles/NPW61212.jpg",
+    planks: "planks/NPW61212.jpg",
+    thumb: "thumbs/NPW61212.jpg",
+    width: 950,
+    height: 184,
+    pattern: "stagger",
+    url: ""
+  },
+  {
+    name: "NPW61222",
+    code: "NPW61222",
+    category: "우드",
+    image: "tiles/NPW61222.jpg",
+    planks: "planks/NPW61222.jpg",
+    thumb: "thumbs/NPW61222.jpg",
+    width: 950,
+    height: 184,
+    pattern: "stagger",
+    url: ""
+  },
+  {
+    name: "NPW61412",
+    code: "NPW61412",
+    category: "우드",
+    image: "tiles/NPW61412.jpg",
+    planks: "planks/NPW61412.jpg",
+    thumb: "thumbs/NPW61412.jpg",
+    width: 950,
+    height: 184,
+    pattern: "stagger",
     url: ""
   }
 ];
