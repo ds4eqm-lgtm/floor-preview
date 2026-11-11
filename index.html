@@ -85,7 +85,7 @@ button:disabled{opacity:.45;cursor:default}
 .sw[aria-pressed="true"] .img{border-color:var(--accent);box-shadow:0 0 0 2px var(--card) inset}
 .sw[aria-pressed="true"]{background:none}
 .layout>*,.side>*{min-width:0}
-/* 제품 분류 탭 (기본형, 뉴에코홈 저수축 등) */
+/* 제품 분류 탭 (뉴에코홈, 프리미엄600 등) */
 .cats{display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 12px}
 .cats button{min-height:38px;padding:7px 14px;border-radius:999px;font-size:13.5px;font-weight:650;background:var(--paper);border-color:var(--line);color:var(--muted)}
 .cats button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -94,6 +94,21 @@ button:disabled{opacity:.45;cursor:default}
   #view{max-height:56vh}
   .swatches{position:relative;display:flex;overflow-x:auto;gap:10px;margin-inline:-14px;padding:0 14px 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
   .sw{flex:0 0 74px;width:74px;scroll-snap-align:start}
+  /* 폰: 분류 탭을 가로 한 줄로, 넘치면 옆으로 밀어서 봄 */
+  .cats{flex-wrap:nowrap;overflow-x:auto;margin-inline:-14px;padding:0 14px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .cats::-webkit-scrollbar{display:none}
+  .cats{gap:4px}
+  .cats button{flex:1 0 auto;white-space:nowrap;min-height:36px;padding:6px 5px;font-size:12px;letter-spacing:-.03em}
+  .cats button .n{display:none}
+  /* 폰: 최근 올린 사진은 결과 사진 저장하기 바로 위 (스크립트가 옮김) */
+  .side>.recent{margin-top:0}
+}
+@media (max-width:374px){
+  .cats{gap:3px}
+  .cats button{padding:6px 4px;font-size:11.5px;letter-spacing:-.04em}
+  /* 작은 폰: 버튼 글자가 두 줄로 꺾이지 않게 */
+  .upload .btn{font-size:14px;padding-inline:8px;gap:6px;white-space:nowrap}
+  .ct-presets button{font-size:12px;letter-spacing:-.04em;white-space:nowrap}
 }
 .info{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .info .name{font-weight:750;font-size:17px;letter-spacing:-.02em}
@@ -259,10 +274,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.11b"></script>
-<script src="refine.js?v=2026.11.11b"></script>
-<script src="orient.js?v=2026.11.11b"></script>
-<script src="camera.js?v=2026.11.11b"></script>
+<script src="products.js?v=2026.11.11c"></script>
+<script src="refine.js?v=2026.11.11c"></script>
+<script src="orient.js?v=2026.11.11c"></script>
+<script src="camera.js?v=2026.11.11c"></script>
 <script>
 (function(){
 "use strict";
@@ -278,7 +293,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.11b";
+const VERSION="2026.11.11c";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -1004,10 +1019,16 @@ function specText(p){
   return Math.min(a,b)+" × "+Math.max(a,b)+" mm"+(pat?" · "+pat:"");
 }
 /* 분류 탭: products.js 의 category 이름별로 (처음 나온 순서) */
-function catOf(p){return String((p&&p.category)||"기본형");}
+function catOf(p){return String((p&&p.category)||"프리미엄600");}
+/* 탭 순서: products.js 의 CATEGORY_ORDER, 거기 없는 이름은 뒤에 처음 나온 순서로 */
+function catNames(){
+  const seen=[...new Set(PRODUCTS.map(catOf))],ord=Array.isArray(window.CATEGORY_ORDER)?window.CATEGORY_ORDER.map(String):[];
+  const rank=n=>{const i=ord.indexOf(n);return i<0?ord.length+seen.indexOf(n):i;};
+  return seen.sort((a,b)=>rank(a)-rank(b));
+}
 function buildCats(){
   const box=$("cats");box.textContent="";
-  const names=[...new Set(PRODUCTS.map(catOf))];
+  const names=catNames();
   box.hidden=names.length<2;
   for(const n of names){
     const b=document.createElement("button");b.type="button";b.setAttribute("role","tab");b.dataset.cat=n;
@@ -1617,13 +1638,22 @@ $("tSave").onclick=async()=>{
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
 };
 
+/* ---------- 폰 화면: 최근 올린 사진을 결과 사진 저장하기 바로 위로 ---------- */
+(function placeRecent(){
+  const rc=$("recent"),home=rc&&rc.parentNode,save=$("tSave");if(!rc||!home||!save||!window.matchMedia)return;
+  const mq=matchMedia("(max-width:899px)");
+  const put=()=>{if(mq.matches){if(rc.nextElementSibling!==save)save.parentNode.insertBefore(rc,save);}else if(rc.parentNode!==home)home.append(rc);};
+  put();try{mq.addEventListener("change",put);}catch(e){mq.addListener&&mq.addListener(put);}
+})();
+
 /* ---------- 시작 ---------- */
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
 async function start(){
   if(!gl)return;
   try{initGL();}catch(e){console.error(e);chip("미리보기 화면을 켤 수 없어요","warn");return;}
   buildSwatches();
-  const want=String(params.get("item")||"").trim().toLowerCase();let idx=Math.max(0,PRODUCTS.findIndex(p=>String(p.code).toLowerCase()===want));
+  const want=String(params.get("item")||"").trim().toLowerCase();let idx=PRODUCTS.findIndex(p=>String(p.code).toLowerCase()===want);
+  if(idx<0)idx=Math.max(0,PRODUCTS.findIndex(p=>catOf(p)===catNames()[0]));
   selectProduct(idx);
   initCT();
   S.grid=params.get("debug")==="1"&&params.get("grid")==="1";

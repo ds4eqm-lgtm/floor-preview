@@ -2,7 +2,7 @@
 // 제품 하나당 중괄호 한 묶음, 묶음 사이에는 쉼표
 // name    화면에 보이는 제품 이름 (모델명)
 // code    주소 뒤에 ?item=코드 붙이면 그 제품이 먼저 선택됨 (영문 숫자만)
-// category 색상 고르기 위 분류 탭 이름 (같은 이름끼리 한 탭에 모임, 탭 순서는 목록에 처음 나온 순서)
+// category 색상 고르기 위 분류 탭 이름 (같은 이름끼리 한 탭에 모임, 탭 순서는 아래 CATEGORY_ORDER, 거기 없는 이름은 뒤에 목록에 처음 나온 순서)
 // image   tiles 폴더의 제품 이미지 (타일 한 장을 위에서 정면으로 찍은 이미지, tiles4 가 없을 때 씀)
 // planks  planks 폴더의 우드 판재 묶음 (판재 여러 장을 긴 쪽이 가로가 되게 위아래로 쌓은 이미지, 판재마다 무작위로 골라 엇갈려 깖)
 // tiles4  tiles4 폴더의 무늬 4장 세트 (서로 다른 무늬 4장을 2×2로 줄눈 없이 붙인 이미지, 바닥에 4장을 무작위로 섞어 깖)
@@ -12,11 +12,14 @@
 // pattern grid 바둑판 시공, half 반장 엇갈림, stagger 우드 엇갈림 랜덤 시공
 // url     제품 판매 페이지 주소 (없으면 빈칸 "")
 
+// 분류 탭 순서 (처음 열면 맨 앞 탭의 첫 제품이 선택됨)
+window.CATEGORY_ORDER = ["뉴에코홈", "프리미엄600", "프리미엄450", "프리미엄 우드"];
+
 window.PRODUCTS = [
   {
     name: "NPT16252",
     code: "NPT16252",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-01.jpg",
     tiles4: "tiles4/NPT16252.jpg",
     thumb: "thumbs/NPT16252.jpg",
@@ -28,7 +31,7 @@ window.PRODUCTS = [
   {
     name: "NPT16272",
     code: "NPT16272",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-02.jpg",
     tiles4: "tiles4/NPT16272.jpg",
     thumb: "thumbs/NPT16272.jpg",
@@ -40,7 +43,7 @@ window.PRODUCTS = [
   {
     name: "NPT16282",
     code: "NPT16282",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-03.jpg",
     tiles4: "tiles4/NPT16282.jpg",
     thumb: "thumbs/NPT16282.jpg",
@@ -52,7 +55,7 @@ window.PRODUCTS = [
   {
     name: "NPT16302",
     code: "NPT16302",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-04.jpg",
     tiles4: "tiles4/NPT16302.jpg",
     thumb: "thumbs/NPT16302.jpg",
@@ -64,7 +67,7 @@ window.PRODUCTS = [
   {
     name: "NPT16312",
     code: "NPT16312",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-05.jpg",
     tiles4: "tiles4/NPT16312.jpg",
     thumb: "thumbs/NPT16312.jpg",
@@ -76,7 +79,7 @@ window.PRODUCTS = [
   {
     name: "NPT16320",
     code: "NPT16320",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-06.jpg",
     tiles4: "tiles4/NPT16320.jpg",
     thumb: "thumbs/NPT16320.jpg",
@@ -88,7 +91,7 @@ window.PRODUCTS = [
   {
     name: "NPT16332",
     code: "NPT16332",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-07.jpg",
     tiles4: "tiles4/NPT16332.jpg",
     thumb: "thumbs/NPT16332.jpg",
@@ -100,7 +103,7 @@ window.PRODUCTS = [
   {
     name: "NPT16342",
     code: "NPT16342",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-08.jpg",
     tiles4: "tiles4/NPT16342.jpg",
     thumb: "thumbs/NPT16342.jpg",
@@ -112,7 +115,7 @@ window.PRODUCTS = [
   {
     name: "NPT16352",
     code: "NPT16352",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-09.jpg",
     tiles4: "tiles4/NPT16352.jpg",
     thumb: "thumbs/NPT16352.jpg",
@@ -124,7 +127,7 @@ window.PRODUCTS = [
   {
     name: "NPT16362",
     code: "NPT16362",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-10.jpg",
     tiles4: "tiles4/NPT16362.jpg",
     thumb: "thumbs/NPT16362.jpg",
@@ -136,7 +139,7 @@ window.PRODUCTS = [
   {
     name: "NPT16372",
     code: "NPT16372",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-11.jpg",
     tiles4: "tiles4/NPT16372.jpg",
     thumb: "thumbs/NPT16372.jpg",
@@ -148,7 +151,7 @@ window.PRODUCTS = [
   {
     name: "NPT16382",
     code: "NPT16382",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/tile-12.jpg",
     tiles4: "tiles4/NPT16382.jpg",
     thumb: "thumbs/NPT16382.jpg",
@@ -160,7 +163,7 @@ window.PRODUCTS = [
   {
     name: "NPT16882",
     code: "NPT16882",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/NPT16882.jpg",
     tiles4: "tiles4/NPT16882.jpg",
     thumb: "thumbs/NPT16882.jpg",
@@ -172,7 +175,7 @@ window.PRODUCTS = [
   {
     name: "NPT16992",
     code: "NPT16992",
-    category: "기본형",
+    category: "프리미엄600",
     image: "tiles/NPT16992.jpg",
     tiles4: "tiles4/NPT16992.jpg",
     thumb: "thumbs/NPT16992.jpg",
@@ -184,7 +187,7 @@ window.PRODUCTS = [
   {
     name: "NEH26132",
     code: "NEH26132",
-    category: "뉴에코홈 저수축",
+    category: "뉴에코홈",
     image: "tiles/NEH26132.jpg",
     tiles4: "tiles4/NEH26132.jpg",
     thumb: "thumbs/NEH26132.jpg",
@@ -196,7 +199,7 @@ window.PRODUCTS = [
   {
     name: "NEH26142",
     code: "NEH26142",
-    category: "뉴에코홈 저수축",
+    category: "뉴에코홈",
     image: "tiles/NEH26142.jpg",
     tiles4: "tiles4/NEH26142.jpg",
     thumb: "thumbs/NEH26142.jpg",
@@ -208,7 +211,7 @@ window.PRODUCTS = [
   {
     name: "NEH26162",
     code: "NEH26162",
-    category: "뉴에코홈 저수축",
+    category: "뉴에코홈",
     image: "tiles/NEH26162.jpg",
     tiles4: "tiles4/NEH26162.jpg",
     thumb: "thumbs/NEH26162.jpg",
@@ -220,7 +223,7 @@ window.PRODUCTS = [
   {
     name: "NEH26172",
     code: "NEH26172",
-    category: "뉴에코홈 저수축",
+    category: "뉴에코홈",
     image: "tiles/NEH26172.jpg",
     tiles4: "tiles4/NEH26172.jpg",
     thumb: "thumbs/NEH26172.jpg",
@@ -232,7 +235,7 @@ window.PRODUCTS = [
   {
     name: "NEH26182",
     code: "NEH26182",
-    category: "뉴에코홈 저수축",
+    category: "뉴에코홈",
     image: "tiles/NEH26182.jpg",
     tiles4: "tiles4/NEH26182.jpg",
     thumb: "thumbs/NEH26182.jpg",
@@ -244,7 +247,7 @@ window.PRODUCTS = [
   {
     name: "NEH26192",
     code: "NEH26192",
-    category: "뉴에코홈 저수축",
+    category: "뉴에코홈",
     image: "tiles/NEH26192.jpg",
     tiles4: "tiles4/NEH26192.jpg",
     thumb: "thumbs/NEH26192.jpg",
@@ -256,7 +259,7 @@ window.PRODUCTS = [
   {
     name: "NPT02812",
     code: "NPT02812",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT02812.jpg",
     tiles4: "tiles4/NPT02812.jpg",
     thumb: "thumbs/NPT02812.jpg",
@@ -268,7 +271,7 @@ window.PRODUCTS = [
   {
     name: "NPT02822",
     code: "NPT02822",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT02822.jpg",
     tiles4: "tiles4/NPT02822.jpg",
     thumb: "thumbs/NPT02822.jpg",
@@ -280,7 +283,7 @@ window.PRODUCTS = [
   {
     name: "NPT06112",
     code: "NPT06112",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06112.jpg",
     tiles4: "tiles4/NPT06112.jpg",
     thumb: "thumbs/NPT06112.jpg",
@@ -292,7 +295,7 @@ window.PRODUCTS = [
   {
     name: "NPT06122",
     code: "NPT06122",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06122.jpg",
     tiles4: "tiles4/NPT06122.jpg",
     thumb: "thumbs/NPT06122.jpg",
@@ -304,7 +307,7 @@ window.PRODUCTS = [
   {
     name: "NPT06130",
     code: "NPT06130",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06130.jpg",
     tiles4: "tiles4/NPT06130.jpg",
     thumb: "thumbs/NPT06130.jpg",
@@ -316,7 +319,7 @@ window.PRODUCTS = [
   {
     name: "NPT06142",
     code: "NPT06142",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06142.jpg",
     tiles4: "tiles4/NPT06142.jpg",
     thumb: "thumbs/NPT06142.jpg",
@@ -328,7 +331,7 @@ window.PRODUCTS = [
   {
     name: "NPT06152",
     code: "NPT06152",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06152.jpg",
     tiles4: "tiles4/NPT06152.jpg",
     thumb: "thumbs/NPT06152.jpg",
@@ -340,7 +343,7 @@ window.PRODUCTS = [
   {
     name: "NPT06162",
     code: "NPT06162",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06162.jpg",
     tiles4: "tiles4/NPT06162.jpg",
     thumb: "thumbs/NPT06162.jpg",
@@ -352,7 +355,7 @@ window.PRODUCTS = [
   {
     name: "NPT06272",
     code: "NPT06272",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06272.jpg",
     tiles4: "tiles4/NPT06272.jpg",
     thumb: "thumbs/NPT06272.jpg",
@@ -364,7 +367,7 @@ window.PRODUCTS = [
   {
     name: "NPT06282",
     code: "NPT06282",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06282.jpg",
     tiles4: "tiles4/NPT06282.jpg",
     thumb: "thumbs/NPT06282.jpg",
@@ -376,7 +379,7 @@ window.PRODUCTS = [
   {
     name: "NPT06312",
     code: "NPT06312",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06312.jpg",
     tiles4: "tiles4/NPT06312.jpg",
     thumb: "thumbs/NPT06312.jpg",
@@ -388,7 +391,7 @@ window.PRODUCTS = [
   {
     name: "NPT06322",
     code: "NPT06322",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06322.jpg",
     tiles4: "tiles4/NPT06322.jpg",
     thumb: "thumbs/NPT06322.jpg",
@@ -400,7 +403,7 @@ window.PRODUCTS = [
   {
     name: "NPT06332",
     code: "NPT06332",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT06332.jpg",
     tiles4: "tiles4/NPT06332.jpg",
     thumb: "thumbs/NPT06332.jpg",
@@ -412,7 +415,7 @@ window.PRODUCTS = [
   {
     name: "NPT08212",
     code: "NPT08212",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT08212.jpg",
     tiles4: "tiles4/NPT08212.jpg",
     thumb: "thumbs/NPT08212.jpg",
@@ -424,7 +427,7 @@ window.PRODUCTS = [
   {
     name: "NPT08242",
     code: "NPT08242",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT08242.jpg",
     tiles4: "tiles4/NPT08242.jpg",
     thumb: "thumbs/NPT08242.jpg",
@@ -436,7 +439,7 @@ window.PRODUCTS = [
   {
     name: "NPT10102",
     code: "NPT10102",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT10102.jpg",
     tiles4: "tiles4/NPT10102.jpg",
     thumb: "thumbs/NPT10102.jpg",
@@ -448,7 +451,7 @@ window.PRODUCTS = [
   {
     name: "NPT10132",
     code: "NPT10132",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT10132.jpg",
     tiles4: "tiles4/NPT10132.jpg",
     thumb: "thumbs/NPT10132.jpg",
@@ -460,7 +463,7 @@ window.PRODUCTS = [
   {
     name: "NPT10252",
     code: "NPT10252",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT10252.jpg",
     tiles4: "tiles4/NPT10252.jpg",
     thumb: "thumbs/NPT10252.jpg",
@@ -472,7 +475,7 @@ window.PRODUCTS = [
   {
     name: "NPT10262",
     code: "NPT10262",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT10262.jpg",
     tiles4: "tiles4/NPT10262.jpg",
     thumb: "thumbs/NPT10262.jpg",
@@ -484,7 +487,7 @@ window.PRODUCTS = [
   {
     name: "NPT10272",
     code: "NPT10272",
-    category: "기본450",
+    category: "프리미엄450",
     image: "tiles/NPT10272.jpg",
     tiles4: "tiles4/NPT10272.jpg",
     thumb: "thumbs/NPT10272.jpg",
@@ -496,7 +499,7 @@ window.PRODUCTS = [
   {
     name: "NPW08392",
     code: "NPW08392",
-    category: "우드",
+    category: "프리미엄 우드",
     image: "tiles/NPW08392.jpg",
     planks: "planks/NPW08392.jpg",
     thumb: "thumbs/NPW08392.jpg",
@@ -508,7 +511,7 @@ window.PRODUCTS = [
   {
     name: "NPW08452",
     code: "NPW08452",
-    category: "우드",
+    category: "프리미엄 우드",
     image: "tiles/NPW08452.jpg",
     planks: "planks/NPW08452.jpg",
     thumb: "thumbs/NPW08452.jpg",
@@ -520,7 +523,7 @@ window.PRODUCTS = [
   {
     name: "NPW10032",
     code: "NPW10032",
-    category: "우드",
+    category: "프리미엄 우드",
     image: "tiles/NPW10032.jpg",
     planks: "planks/NPW10032.jpg",
     thumb: "thumbs/NPW10032.jpg",
@@ -532,7 +535,7 @@ window.PRODUCTS = [
   {
     name: "NPW10042",
     code: "NPW10042",
-    category: "우드",
+    category: "프리미엄 우드",
     image: "tiles/NPW10042.jpg",
     planks: "planks/NPW10042.jpg",
     thumb: "thumbs/NPW10042.jpg",
@@ -544,7 +547,7 @@ window.PRODUCTS = [
   {
     name: "NPW10072",
     code: "NPW10072",
-    category: "우드",
+    category: "프리미엄 우드",
     image: "tiles/NPW10072.jpg",
     planks: "planks/NPW10072.jpg",
     thumb: "thumbs/NPW10072.jpg",
@@ -556,7 +559,7 @@ window.PRODUCTS = [
   {
     name: "NPW12012",
     code: "NPW12012",
-    category: "우드",
+    category: "프리미엄 우드",
     image: "tiles/NPW12012.jpg",
     planks: "planks/NPW12012.jpg",
     thumb: "thumbs/NPW12012.jpg",
@@ -568,7 +571,7 @@ window.PRODUCTS = [
   {
     name: "NPW61212",
     code: "NPW61212",
-    category: "우드",
+    category: "프리미엄 우드",
     image: "tiles/NPW61212.jpg",
     planks: "planks/NPW61212.jpg",
     thumb: "thumbs/NPW61212.jpg",
@@ -580,7 +583,7 @@ window.PRODUCTS = [
   {
     name: "NPW61222",
     code: "NPW61222",
-    category: "우드",
+    category: "프리미엄 우드",
     image: "tiles/NPW61222.jpg",
     planks: "planks/NPW61222.jpg",
     thumb: "thumbs/NPW61222.jpg",
@@ -592,7 +595,7 @@ window.PRODUCTS = [
   {
     name: "NPW61412",
     code: "NPW61412",
-    category: "우드",
+    category: "프리미엄 우드",
     image: "tiles/NPW61412.jpg",
     planks: "planks/NPW61412.jpg",
     thumb: "thumbs/NPW61412.jpg",
