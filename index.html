@@ -241,10 +241,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.06c"></script>
-<script src="refine.js?v=2026.11.06c"></script>
-<script src="orient.js?v=2026.11.06c"></script>
-<script src="camera.js?v=2026.11.06c"></script>
+<script src="products.js?v=2026.11.11a"></script>
+<script src="refine.js?v=2026.11.11a"></script>
+<script src="orient.js?v=2026.11.11a"></script>
+<script src="camera.js?v=2026.11.11a"></script>
 <script>
 (function(){
 "use strict";
@@ -260,7 +260,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.06c";
+const VERSION="2026.11.11a";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -1610,7 +1610,18 @@ async function start(){
   try{
     const mask=await loadImg("sample/room-mask.png");
     if(tok!==S.loadToken)return;
-    setMask(mask);applyAuto();welcome();
+    setMask(mask);applyAuto();
+    /* 예시 방은 원근값을 미리 재 둔 걸로 (sample/room.json), 없으면 자동 */
+    try{
+      const r=await fetch(bust("sample/room.json"));
+      if(r.ok&&tok===S.loadToken){
+        const g=await r.json(),n=(v,d)=>Number.isFinite(v)?v:d;
+        S.fov=n(g.fov,0);S.camH=n(g.camH,1400);
+        S.autoPitch=S.pitch=n(g.pitch,S.pitch);S.autoRoll=S.roll=n(g.roll,0);S.autoRot=S.rot=n(g.rot,S.rot);S.rotStep=0;
+        S.camInfo="예시 방 고정값";debugNote();render();
+      }
+    }catch(e){}
+    welcome();
   }catch(e){
     if(tok!==S.loadToken)return;
     await queueDetect(tok);
