@@ -3,31 +3,44 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>우리집 바닥 미리보기</title>
+<title>우리집 바닥 미리보기 | 새로고침</title>
+<link rel="icon" type="image/png" href="brand/icon.png">
+<link rel="apple-touch-icon" href="brand/icon.png">
+<meta name="theme-color" content="#eae1d8">
 <meta name="description" content="우리집 사진을 올리면 데코타일이 깔린 모습을 바로 보여드려요">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* 레이아웃: 위 사진 무대, 아래 제품 고르기 / 넓은 화면은 왼쪽 무대, 오른쪽 조작판 */
 :root{
-  --paper:#f5f4f0; --card:#ffffff; --ink:#1d211f; --muted:#69706b; --line:#e1dfd8;
-  --accent:#2e5b4e; --accent-ink:#ffffff; --accent-soft:#e3ece8; --stage:#1a1b1a; --warn:#9a5b16;
+  /* 새로고침 스토어 색: 상단 베이지 띠, 로고 남색, 따뜻한 흰 바탕 */
+  --paper:#faf7f4; --card:#ffffff; --ink:#1f2a3a; --muted:#857b72; --line:#e9e2da; --band:#eae1d8;
+  --accent:#203453; --accent-ink:#ffffff; --accent-soft:#f1ebe4; --stage:#efe8e1; --warn:#a15c1c;
   --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --r:14px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --paper:#141614; --card:#1d201e; --ink:#ecefec; --muted:#9aa29c; --line:#2d322f;
-  --accent:#7fb8a5; --accent-ink:#0f1a16; --accent-soft:#22302b; --stage:#0c0d0c; --warn:#e2a35a; color-scheme:dark}}
-:root[data-theme="dark"]{--paper:#141614; --card:#1d201e; --ink:#ecefec; --muted:#9aa29c; --line:#2d322f;
-  --accent:#7fb8a5; --accent-ink:#0f1a16; --accent-soft:#22302b; --stage:#0c0d0c; --warn:#e2a35a; color-scheme:dark}
+  --paper:#15171b; --card:#1e2127; --ink:#eef0f3; --muted:#a29a92; --line:#2e323a; --band:#23272e;
+  --accent:#d6c6b2; --accent-ink:#1a1f2a; --accent-soft:#2a2f38; --stage:#0f1114; --warn:#e2a35a; color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#15171b; --card:#1e2127; --ink:#eef0f3; --muted:#a29a92; --line:#2e323a; --band:#23272e;
+  --accent:#d6c6b2; --accent-ink:#1a1f2a; --accent-soft:#2a2f38; --stage:#0f1114; --warn:#e2a35a; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--paper);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
-  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  padding-bottom:env(safe-area-inset-bottom,0px)}
 .wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 32px}
-header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.brand{font-weight:800;letter-spacing:-.02em;font-size:15px;color:var(--accent)}
-h1{font-size:21px;letter-spacing:-.03em;margin:0;font-weight:750;text-wrap:balance}
+/* 상단 띠: 스토어처럼 베이지 바탕에 로고 */
+.band{background:var(--band);padding-top:env(safe-area-inset-top,0px)}
+.band-in{max-width:1180px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{display:block;height:34px;width:auto}
+.logo-d{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo-l{display:none}:root:not([data-theme="light"]) .logo-d{display:block}}
+:root[data-theme="dark"] .logo-l{display:none}:root[data-theme="dark"] .logo-d{display:block}
+.band .tagline{font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:-.01em;text-align:right}
+header{margin:6px 0 14px}
+h1{font-size:22px;letter-spacing:-.03em;margin:0;font-weight:750;color:var(--ink);text-wrap:balance}
+header p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+@media (max-width:420px){.logo{height:28px}.band .tagline{font-size:11.5px}}
 .layout{display:grid;gap:16px}
 @media (min-width:900px){.layout{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);align-items:start}.side{position:sticky;top:14px}}
 .stage{position:relative;background:var(--stage);border-radius:var(--r);overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:260px}
@@ -132,10 +145,15 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </style>
 </head>
 <body>
+<div class="band"><div class="band-in">
+  <img class="logo logo-l" id="logo" src="brand/logo.png" alt="새로고침" width="273" height="67">
+  <img class="logo logo-d" src="brand/logo-white.png" alt="" width="273" height="67" aria-hidden="true">
+  <span class="tagline">프리미엄 데코타일 브랜드</span>
+</div></div>
 <div class="wrap">
   <header>
-    <span class="brand" id="brand">새로고침</span>
     <h1>우리집 바닥 미리보기</h1>
+    <p>우리집 사진에 데코타일을 미리 깔아 보세요</p>
   </header>
 
   <div class="layout">
@@ -241,10 +259,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.11a"></script>
-<script src="refine.js?v=2026.11.11a"></script>
-<script src="orient.js?v=2026.11.11a"></script>
-<script src="camera.js?v=2026.11.11a"></script>
+<script src="products.js?v=2026.11.11b"></script>
+<script src="refine.js?v=2026.11.11b"></script>
+<script src="orient.js?v=2026.11.11b"></script>
+<script src="camera.js?v=2026.11.11b"></script>
 <script>
 (function(){
 "use strict";
@@ -260,11 +278,11 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.11a";
+const VERSION="2026.11.11b";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
-if(SHOP.name) $("brand").textContent=SHOP.name;
+if(SHOP.name){const l=$("logo");if(l)l.alt=SHOP.name;}
 $("gpuNote").textContent="버전 "+VERSION;
 window.addEventListener("error",e=>{
   if(!e||!e.filename||e.filename.indexOf(location.origin)!==0)return;
@@ -1569,16 +1587,28 @@ let lastW=window.innerWidth;
 window.addEventListener("resize",()=>{if(Math.abs(window.innerWidth-lastW)>40&&S.zoom>1){lastW=window.innerWidth;resetZoom();}else updateSplitUI();});
 
 /* ---------- 저장 ---------- */
+let logoP=null;
+function saveLogo(){
+  if(!logoP)logoP=new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=bust("brand/logo-white.png");});
+  return logoP;
+}
 $("tSave").onclick=async()=>{
   if(!S.W)return;
   const wasCmp=S.compare,wasB=S.brush;S.compare=false;S.brush=false;S.fullRender=true;draw();S.fullRender=false;
   const c=document.createElement("canvas");c.width=S.W;c.height=S.H;const x=c.getContext("2d");x.drawImage(view,0,0);
   S.compare=wasCmp;S.brush=wasB;render();
+  /* 오른쪽 아래에 새로고침 로고(흰색)와 제품 이름 */
   const fs=Math.max(14,Math.round(S.W/42)),pad=Math.round(fs*.8);
-  const label=[SHOP.name,S.product&&S.product.name].filter(Boolean).join("  ");
-  if(label){x.font="600 "+fs+"px "+getComputedStyle(document.body).fontFamily;const tw=x.measureText(label).width;
-    x.fillStyle="rgba(0,0,0,.5)";x.fillRect(S.W-tw-pad*3,S.H-fs-pad*2.4,tw+pad*2,fs+pad*1.4);
-    x.fillStyle="#fff";x.textBaseline="middle";x.fillText(label,S.W-tw-pad*2,S.H-fs/2-pad*1.7);}
+  const pname=S.product?S.product.name:"";
+  x.font="600 "+fs+"px "+getComputedStyle(document.body).fontFamily;
+  const lg=await saveLogo(),lh=Math.round(fs*1.5),lw=lg?Math.round(lg.naturalWidth*lh/lg.naturalHeight):0;
+  const tw=pname?x.measureText(pname).width:0,gap=lg&&pname?pad:0,bw=lw+gap+tw+pad*2,bh=lh+pad*1.2;
+  if(bw>pad*2){
+    const bx=S.W-bw-pad,by=S.H-bh-pad;
+    x.fillStyle="rgba(32,52,83,.78)";x.beginPath();if(x.roundRect)x.roundRect(bx,by,bw,bh,bh/2);else x.rect(bx,by,bw,bh);x.fill();
+    if(lg)x.drawImage(lg,bx+pad,by+(bh-lh)/2,lw,lh);
+    if(pname){x.fillStyle="#fff";x.textBaseline="middle";x.fillText(pname,bx+pad+lw+gap,by+bh/2);}
+  }
   const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.92));
   const name=(SHOP.name||"floor")+"_"+(S.product?S.product.code||"preview":"preview")+".jpg";
   const file=new File([blob],name,{type:"image/jpeg"});
