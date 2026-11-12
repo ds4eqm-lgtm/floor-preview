@@ -452,10 +452,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.12e"></script>
-<script src="refine.js?v=2026.11.12e"></script>
-<script src="orient.js?v=2026.11.12e"></script>
-<script src="camera.js?v=2026.11.12e"></script>
+<script src="products.js?v=2026.11.12f"></script>
+<script src="refine.js?v=2026.11.12f"></script>
+<script src="orient.js?v=2026.11.12f"></script>
+<script src="camera.js?v=2026.11.12f"></script>
 <script>
 (function(){
 "use strict";
@@ -471,7 +471,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.12e";
+const VERSION="2026.11.12f";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -1823,9 +1823,9 @@ $("tSave").onclick=async()=>{
 /* ---------- 타일 계산기 ----------
    면적 = 가로 × 세로 (m²), 평수 = 면적 ÷ 3.3
    타일 수량 = 평수 올림 (데코타일 1박스 = 약 1평)
-   리무벌 스티커 = 타일 수량 × 450 은 2.3, 600 은 1.2, 우드는 4.1 (대표님이 준 계산식)
-     소수점은 버리고 1장 더함 (기존 새로고침 계산기와 같게: 5박스 600 = 6 → 7장) */
-const CALC={py:3.3,sticker:{cS450:2.3,cS600:1.2,cSWood:4.1}};
+   리무벌 스티커 = 타일 수량 × 450 은 2.3, 600 은 1.3, 우드는 4.1 (대표님이 준 계산식)
+     소수점은 버리고 1장 더함 (딱 떨어질 때만 1장이 더 붙고 나머지는 올림과 같음) */
+const CALC={py:3.3,sticker:{cS450:2.3,cS600:1.3,cSWood:4.1}};
 function calcNum(v){const x=parseFloat(String(v).replace(/,/g,".").replace(/[^0-9.]/g,""));return isFinite(x)&&x>0?x:0;}
 function calcRun(){
   const a=calcNum($("cW").value)*calcNum($("cH").value),py=a/CALC.py;
