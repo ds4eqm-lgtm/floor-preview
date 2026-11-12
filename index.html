@@ -138,7 +138,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 #ctRange::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent);box-shadow:0 1px 5px rgba(0,0,0,.3)}
 #ctRange:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:6px}
 .ct-ends{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:2px}
-.ct-presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:10px}
+.ct-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
 .ct-presets button{flex-direction:column;gap:1px;min-height:50px;padding:6px 1px;font-size:13px;font-weight:650;line-height:1.2;white-space:nowrap;letter-spacing:-.03em}
 .ct-presets .k{font-size:11px;font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums}
 /* 최근 올린 사진 (이 기기 안에만 저장) */
@@ -158,7 +158,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 .th-del span{position:relative}
 @media (hover:hover){.th-del{opacity:.75}.th:hover .th-del{opacity:1}}
 /* 폰 앱 화면: 사진 위 제품 이름표, 아래 아이콘 줄, 아이콘을 누르면 아래에서 올라오는 창 (컴퓨터에선 안 보임) */
-.ppill,.dock,.sheet-head,.recent-empty,.stagebtns{display:none}
+.ppill,.dock,.sheet-head,.recent-empty,.stagebtns,#upSave,.zoombar .zf{display:none}
+.zoombar .zf .i-off{display:none}
+.zoombar .zf[aria-pressed="true"] .i-on{display:none}
+.zoombar .zf[aria-pressed="true"] .i-off{display:block}
 .rt{display:inline}
 @media (max-width:899px){
   html{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -173,8 +176,19 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
   .layout>section{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
   .stage{flex:1 1 0;min-height:110px}
   #view{max-height:none}
-  .upload{margin-top:8px;flex:none}
-  .upload .btn{min-height:42px;padding-block:8px}
+  .upload{margin-top:8px;flex:none;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr);gap:6px}
+  .upload .btn{min-height:42px;padding:8px 4px;gap:5px;font-size:14px;letter-spacing:-.03em;white-space:nowrap}
+  .upload .btn svg{width:18px;height:18px;flex:none}
+  #upSave{display:inline-flex;background:linear-gradient(160deg,#c9a77c,#a5825a);border-color:#a5825a;color:#fff}
+  .zoombar .zf{display:inline-flex;align-items:center;justify-content:center;margin-left:2px;background:rgba(255,255,255,.16)}
+  .zoombar .zf[aria-pressed="true"]{background:#fff;color:#1f2a3a}
+  /* 크게 보기: 사진만 화면 가득 */
+  body.full .band,body.full header,body.full .upload,body.full #shotTip,body.full .side{display:none!important}
+  body.full .wrap{padding:0}
+  body.full .stage{border-radius:0;background:#0d0e10;min-height:0}
+  body.full .stagebtns{top:max(8px,env(safe-area-inset-top,0px))}
+  body.full .chip{top:max(8px,env(safe-area-inset-top,0px))}
+  body.full .zoombar,body.full .ppill{bottom:max(10px,env(safe-area-inset-bottom,0px))}
   #shotTip{flex:none;margin:5px 2px 0;font-size:11.5px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 사진 위 제품 이름표 */
   .ppill{display:flex;position:absolute;left:8px;bottom:8px;z-index:2;align-items:center;gap:7px;max-width:calc(100% - 150px);padding:4px 10px 4px 4px;border-radius:12px;background:rgba(255,255,255,.92);color:#1f2a3a;box-shadow:0 2px 8px rgba(0,0,0,.18);pointer-events:none}
@@ -238,7 +252,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
   .app .ic.tile::after,.app .ic.photo.has::after{content:"";position:absolute;inset:0;border-radius:15px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
   .app .ic.sun{background:linear-gradient(135deg,#ffb067,#fff1dc 52%,#cfe0ff);color:#5a3a12}
   .app .ic.beige{background:linear-gradient(160deg,#f4ede5,#e2d6c8);color:#203453}
-  .app .ic.save{background:linear-gradient(160deg,#c9a77c,#a5825a)}
+  .app .ic.calc{background:linear-gradient(160deg,#f4ede5,#e2d6c8);color:#203453}
   .app .ic.photo.has svg{display:none}
   .app[aria-pressed="true"] .ic{box-shadow:0 0 0 3px var(--paper),0 0 0 5px var(--accent)}
   .app .nm{line-height:1.2;white-space:nowrap}
@@ -287,6 +301,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
           <span id="zLevel" aria-live="polite">1배</span>
           <button type="button" id="zIn" aria-label="확대"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 12h12M12 6v12"/></svg></button>
           <button type="button" id="zReset" class="zr" hidden>전체 보기</button>
+          <button type="button" id="zFull" class="zf" aria-label="화면 가득 크게 보기" aria-pressed="false"><svg class="i-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="i-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
         </div>
       </div>
       <div class="upload">
@@ -298,6 +313,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg>
           앨범에서 고르기
         </label>
+        <button type="button" class="btn save" id="upSave"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>사진 저장</button>
         <input id="fileCam" class="vh" type="file" accept="image/*" capture="environment">
         <input id="fileAlbum" class="vh" type="file" accept="image/*,.heic,.heif">
       </div>
@@ -362,7 +378,6 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
         <input id="ctRange" type="range" min="2500" max="7500" step="100" value="5500">
         <div class="ct-ends" aria-hidden="true"><span>노란 빛</span><span>하얀 빛</span><span>푸른 빛</span></div>
         <div class="ct-presets" role="group" aria-label="조명 색 고르기">
-          <button type="button" data-k="3000" aria-pressed="false"><span class="n">전구색</span><span class="k">3000K</span></button>
           <button type="button" data-k="4000" aria-pressed="false"><span class="n">주백색</span><span class="k">4000K</span></button>
           <button type="button" data-k="5500" aria-pressed="false"><span class="n">자연광</span><span class="k">5500K</span></button>
           <button type="button" data-k="6500" aria-pressed="false"><span class="n">주광색</span><span class="k">6500K</span></button>
@@ -380,18 +395,18 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
         <button type="button" class="app" data-act="light"><span class="ic sun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><span class="nm">조명 색</span></button>
         <button type="button" class="app" data-act="brush"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/></svg></span><span class="nm">바닥 고치기</span></button>
         <button type="button" class="app" data-act="recent" id="dockRecent"><span class="ic photo" id="dockRecentImg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span><span class="nm">최근 사진</span></button>
+        <button type="button" class="app" data-act="calc"><span class="ic calc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><rect x="8" y="5.5" width="8" height="3.5" rx=".8"/><path d="M8.5 12.5h.01M12 12.5h.01M15.5 12.5h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01M8.5 18.5h.01M12 18.5h.01M15.5 18.5h.01" stroke-width="2.6" stroke-linecap="round"/></svg></span><span class="nm">타일 계산기</span></button>
         <a class="app" data-act="product" id="dockProduct" href="#" target="_blank" rel="noopener" hidden><span class="ic beige"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span><span class="nm">제품 보기</span></a>
-        <button type="button" class="app" data-act="save"><span class="ic save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></span><span class="nm">사진 저장</span></button>
       </nav>
     </aside>
   </div>
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.12a"></script>
-<script src="refine.js?v=2026.11.12a"></script>
-<script src="orient.js?v=2026.11.12a"></script>
-<script src="camera.js?v=2026.11.12a"></script>
+<script src="products.js?v=2026.11.12b"></script>
+<script src="refine.js?v=2026.11.12b"></script>
+<script src="orient.js?v=2026.11.12b"></script>
+<script src="camera.js?v=2026.11.12b"></script>
 <script>
 (function(){
 "use strict";
@@ -407,7 +422,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.12a";
+const VERSION="2026.11.12b";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -1765,6 +1780,7 @@ function setAppH(){document.documentElement.style.setProperty("--app-h",window.i
 function openSheet(k){
   if(!MOB.matches||!SHEET_TITLE[k])return;
   const cur=document.body.dataset.sheet;if(cur===k)return;
+  if(document.body.classList.contains("full"))setFull(false);
   if(cur==="brush"&&S.brush)setBrush(false);
   if(k!=="brush"&&S.compare&&k!=="light")setCompare(false);
   document.body.dataset.sheet=k;$("sheetTitle").textContent=SHEET_TITLE[k];
@@ -1783,7 +1799,11 @@ function closeSheet(fromPop){
   mobSync();
 }
 /* 안드로이드 뒤로 가기: 창이 열려 있으면 창만 닫음 */
-window.addEventListener("popstate",()=>{if(skipPop>0){skipPop--;return;}if(document.body.dataset.sheet)closeSheet(true);sheetPushed=false;});
+window.addEventListener("popstate",()=>{
+  if(skipPop>0){skipPop--;return;}
+  if(document.body.classList.contains("full")){fullPushed=false;setFull(false,true);return;}
+  if(document.body.dataset.sheet)closeSheet(true);sheetPushed=false;
+});
 $("sheetClose").onclick=()=>closeSheet();
 /* 창 머리를 아래로 끌면 닫힘 */
 (function(){
@@ -1797,8 +1817,31 @@ $("dock").addEventListener("click",e=>{
   const b=e.target.closest(".app");if(!b)return;
   const k=b.dataset.act;
   if(k==="color"||k==="light"||k==="brush"||k==="recent")openSheet(k);
-  else if(k==="save")$("tSave").click();
+  else if(k==="calc")chip("타일 계산기는 준비 중이에요","");
 });
+$("upSave").onclick=()=>$("tSave").click();
+/* 크게 보기: 사진만 폰 화면 가득 (안드로이드는 주소창까지 숨김) */
+let fullPushed=false;
+function setFull(on,fromPop){
+  on=!!on&&MOB.matches;
+  if(on===document.body.classList.contains("full"))return;
+  if(on){
+    if(document.body.dataset.sheet){const had=sheetPushed;sheetPushed=false;closeSheet(true);fullPushed=had;}
+    if(S.brush)setBrush(false);
+    document.body.classList.add("full");
+    if(!fullPushed){try{history.pushState({fpFull:1},"");fullPushed=true;}catch(e){}}
+    const de=document.documentElement;try{const r=de.requestFullscreen||de.webkitRequestFullscreen;if(r&&!document.fullscreenElement){const q=r.call(de);if(q&&q.catch)q.catch(()=>{});}}catch(e){}
+  }else{
+    document.body.classList.remove("full");
+    try{if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{});}catch(e){}
+    if(fullPushed&&!fromPop){fullPushed=false;skipPop++;try{history.back();}catch(e){skipPop--;}}
+    else fullPushed=false;
+  }
+  $("zFull").setAttribute("aria-pressed",String(on));$("zFull").setAttribute("aria-label",on?"크게 보기 끝내기":"화면 가득 크게 보기");
+  setAppH();requestAnimationFrame(fitView);
+}
+$("zFull").onclick=()=>setFull(!document.body.classList.contains("full"));
+document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement&&document.body.classList.contains("full"))setFull(false);setAppH();requestAnimationFrame(fitView);});
 $("sbCompare").onclick=()=>setCompare(!S.compare);
 $("sbRotate").onclick=()=>$("tRotate").click();
 /* 최근 사진 창에서 사진을 고르면 창 닫기 */
