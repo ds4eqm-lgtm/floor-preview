@@ -157,6 +157,29 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 .th-del::before{content:"";position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(18,20,19,.62)}
 .th-del span{position:relative}
 @media (hover:hover){.th-del{opacity:.75}.th:hover .th-del{opacity:1}}
+/* 타일 계산기 */
+.calc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.calc-top .label{margin:0}
+.calc-top .linkbtn{min-height:28px;padding:2px}
+.calc-in{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:8px}
+.calc-in label{display:flex;flex-direction:column;gap:4px;min-width:0}
+.calc-in .t{font-size:12.5px;font-weight:600;color:var(--muted)}
+.calc-in .f{position:relative;display:block}
+.calc-in input{width:100%;height:46px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font:inherit;font-size:18px;font-weight:700;padding:0 34px 0 12px;font-variant-numeric:tabular-nums;-webkit-appearance:none;appearance:none}
+.calc-in input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--card)}
+.calc-in .u{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:600;color:var(--muted);pointer-events:none}
+.calc-x{font-size:18px;color:var(--muted);padding-bottom:11px}
+.calc-out{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:12px}
+.calc-out>div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:8px 4px;border-radius:12px;background:var(--accent-soft);text-align:center;min-width:0}
+.calc-out .c2{grid-column:span 3}
+.calc-out .cbox{grid-column:span 6;flex-direction:row;justify-content:space-between;padding:11px 16px;background:var(--accent);color:var(--accent-ink)}
+.calc-out .c3{grid-column:span 2}
+.calc-out span{font-size:12px;font-weight:600;color:var(--muted);line-height:1.25;white-space:nowrap}
+.calc-out span small{display:block;font-size:11px;font-weight:700;color:var(--ink)}
+.calc-out b{font-size:13px;font-weight:600;white-space:nowrap}
+.calc-out em{font-style:normal;font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.calc-out .cbox span{color:inherit;opacity:.85;font-size:14px}
+.calc-out .cbox em{font-size:24px}
 /* 폰 앱 화면: 사진 위 제품 이름표, 아래 아이콘 줄, 아이콘을 누르면 아래에서 올라오는 창 (컴퓨터에선 안 보임) */
 .ppill,.dock,.sheet-head,.recent-empty,.stagebtns,#upSave,.zoombar .zf{display:none}
 .zoombar .zf .i-off{display:none}
@@ -210,7 +233,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
   .side>.dock{display:grid!important}
   body[data-sheet] .side>.dock{display:none!important}
   body[data-sheet] .side>#sheetHead{display:flex!important}
-  body[data-sheet="color"] .side>#colorPanel,body[data-sheet="light"] .side>#ctPanel,body[data-sheet="brush"] .side>#brushPanel{display:block!important}
+  body[data-sheet="color"] .side>#colorPanel,body[data-sheet="light"] .side>#ctPanel,body[data-sheet="calc"] .side>#calcPanel,body[data-sheet="brush"] .side>#brushPanel{display:block!important}
   body[data-sheet="color"] .side>#info{display:flex!important}
   /* 판매 주소가 없으면 이름은 사진 위 이름표로 충분해서 창에선 뺌 */
   body[data-sheet="color"] .side>#info.nolink{display:none!important}
@@ -226,7 +249,11 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
   .sheet-x{width:34px;height:34px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--accent-soft);color:var(--muted)}
   .sheet-x svg{width:16px;height:16px}
   .side>.panel{border:0;padding:0;background:none;border-radius:0}
-  .side>.panel>p.label,.side .ct-head .label{display:none}
+  .side>.panel>p.label,.side .ct-head .label,.side .calc-top .label{display:none}
+  .side>#calcPanel{position:relative}
+  .side .calc-top{position:absolute;right:0;top:-6px;margin:0;z-index:1}
+  body[data-sheet="calc"] header{display:none}
+  body[data-sheet="calc"] .side{max-height:calc(var(--app-h,100dvh)*.72)}
   .side>#info{border-top:1px solid var(--line);padding-top:10px}
   .side>#info .name{font-size:15px}.side>#info .spec{font-size:12.5px}
   .side>#info .btn{min-height:40px;padding:8px 14px;font-size:13.5px}
@@ -266,6 +293,11 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
   .app .ic.tile::after,.app .ic.photo.has::after{border-radius:13px}
 }
 @media (max-width:899px) and (max-height:600px){
+  .calc-in input{height:40px}
+  .calc-out{margin-top:8px;gap:5px}
+  .calc-out>div{padding:5px 4px}
+  .calc-out .cbox{padding:7px 14px}
+  .calc-out em{font-size:17px}.calc-out .cbox em{font-size:21px}
   #shotTip{display:none}
   .band-in{padding-block:5px}
   .logo{height:24px}
@@ -370,6 +402,23 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
         <p class="hint">파랗게 보이는 곳에만 타일이 깔려요. 가구나 벽에 묻었으면 지우고, 빠진 바닥은 칠해 주세요.</p>
       </div>
 
+      <div class="panel calc" id="calcPanel">
+        <div class="calc-top"><p class="label">타일 계산기</p><button type="button" class="linkbtn" id="cReset">초기화</button></div>
+        <div class="calc-in">
+          <label for="cW"><span class="t">가로 길이</span><span class="f"><input id="cW" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="0"><span class="u">m</span></span></label>
+          <span class="calc-x" aria-hidden="true">×</span>
+          <label for="cH"><span class="t">세로 길이</span><span class="f"><input id="cH" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0"><span class="u">m</span></span></label>
+        </div>
+        <div class="calc-out" aria-live="polite">
+          <div class="c2"><span>면적</span><b><em id="cArea">0.00</em> m²</b></div>
+          <div class="c2"><span>평수</span><b><em id="cPy">0.00</em> 평</b></div>
+          <div class="cbox"><span>타일 수량</span><b><em id="cBox">0</em> BOX</b></div>
+          <div class="c3"><span>리무벌 스티커<small>450</small></span><b><em id="cS450">0</em> 장</b></div>
+          <div class="c3"><span>리무벌 스티커<small>600</small></span><b><em id="cS600">0</em> 장</b></div>
+          <div class="c3"><span>리무벌 스티커<small>우드</small></span><b><em id="cSWood">0</em> 장</b></div>
+        </div>
+      </div>
+
       <div class="panel" id="ctPanel">
         <div class="ct-head">
           <label class="label" for="ctRange">조명 색온도</label>
@@ -403,10 +452,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.12b"></script>
-<script src="refine.js?v=2026.11.12b"></script>
-<script src="orient.js?v=2026.11.12b"></script>
-<script src="camera.js?v=2026.11.12b"></script>
+<script src="products.js?v=2026.11.12c"></script>
+<script src="refine.js?v=2026.11.12c"></script>
+<script src="orient.js?v=2026.11.12c"></script>
+<script src="camera.js?v=2026.11.12c"></script>
 <script>
 (function(){
 "use strict";
@@ -422,7 +471,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.12b";
+const VERSION="2026.11.12c";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -1771,9 +1820,31 @@ $("tSave").onclick=async()=>{
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
 };
 
+/* ---------- 타일 계산기 ----------
+   면적 = 가로 × 세로 (m²), 평수 = 면적 ÷ 3.3
+   타일 수량 = 평수 올림 (데코타일 1박스 = 약 1평)
+   리무벌 스티커 = 면적 ÷ 스티커 한 장이 맡는 면적, 반올림 (최소 1장)
+     450: 타일 6장분 (0.45 × 0.45 × 6), 600: 타일 6장분 (0.6 × 0.6 × 6), 우드: 판재 4장분 (0.95 × 0.184 × 4)
+     기존 새로고침 계산기 예시(5m × 3m → 12, 7, 21장)에 맞춘 값 */
+const CALC={py:3.3,sticker:{cS450:.45*.45*6,cS600:.6*.6*6,cSWood:.95*.184*4}};
+function calcNum(v){const x=parseFloat(String(v).replace(/,/g,".").replace(/[^0-9.]/g,""));return isFinite(x)&&x>0?x:0;}
+function calcRun(){
+  const a=calcNum($("cW").value)*calcNum($("cH").value),py=a/CALC.py;
+  $("cArea").textContent=a.toFixed(2);$("cPy").textContent=py.toFixed(2);
+  $("cBox").textContent=a>0?Math.ceil(py-1e-9):0;
+  for(const id in CALC.sticker)$(id).textContent=a>0?Math.max(1,Math.round(a/CALC.sticker[id])):0;
+}
+for(const id of ["cW","cH"]){
+  const el=$(id);
+  el.addEventListener("input",()=>{const v=el.value.replace(/,/g,".").replace(/[^0-9.]/g,"").replace(/(\..*)\./g,"$1");if(v!==el.value)el.value=v;calcRun();});
+  el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if(id==="cW")$("cH").focus();else el.blur();}});
+}
+$("cReset").onclick=()=>{$("cW").value="";$("cH").value="";calcRun();};
+calcRun();
+
 /* ---------- 폰 화면: 앱처럼 아이콘을 누르면 아래에서 창이 올라옴 ---------- */
 const MOB=window.matchMedia?matchMedia("(max-width:899px)"):{matches:false,addEventListener(){}};
-const SHEET_TITLE={color:"색상 고르기",light:"조명 색온도",brush:"바닥 범위 고치기",recent:"최근 올린 사진"};
+const SHEET_TITLE={color:"색상 고르기",light:"조명 색온도",brush:"바닥 범위 고치기",recent:"최근 올린 사진",calc:"타일 계산기"};
 let sheetPushed=false,skipPop=0;
 /* 폰 브라우저 실제 보이는 높이 (주소창 빼고) */
 function setAppH(){document.documentElement.style.setProperty("--app-h",window.innerHeight+"px");}
@@ -1816,8 +1887,7 @@ $("sheetClose").onclick=()=>closeSheet();
 $("dock").addEventListener("click",e=>{
   const b=e.target.closest(".app");if(!b)return;
   const k=b.dataset.act;
-  if(k==="color"||k==="light"||k==="brush"||k==="recent")openSheet(k);
-  else if(k==="calc")chip("타일 계산기는 준비 중이에요","");
+  if(k==="color"||k==="light"||k==="brush"||k==="recent"||k==="calc")openSheet(k);
 });
 $("upSave").onclick=()=>$("tSave").click();
 /* 크게 보기: 사진만 폰 화면 가득 (안드로이드는 주소창까지 숨김) */
