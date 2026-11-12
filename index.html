@@ -203,6 +203,9 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
   .upload .btn{min-height:42px;padding:8px 4px;gap:5px;font-size:14px;letter-spacing:-.03em;white-space:nowrap}
   .upload .btn svg{width:18px;height:18px;flex:none}
   #upSave{display:inline-flex;background:linear-gradient(160deg,#c9a77c,#a5825a);border-color:#a5825a;color:#fff}
+  /* 폰: 확대 축소는 두 손가락, 두 번 톡으로만 (− + 전체 보기 버튼 없음) */
+  .zoombar #zOut,.zoombar #zIn,.zoombar #zReset{display:none!important}
+  .zoombar #zLevel{padding:0 4px 0 8px}
   .zoombar .zf{display:inline-flex;align-items:center;justify-content:center;margin-left:2px;background:rgba(255,255,255,.16)}
   .zoombar .zf[aria-pressed="true"]{background:#fff;color:#1f2a3a}
   /* 크게 보기: 사진만 화면 가득 */
@@ -452,10 +455,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.12h"></script>
-<script src="refine.js?v=2026.11.12h"></script>
-<script src="orient.js?v=2026.11.12h"></script>
-<script src="camera.js?v=2026.11.12h"></script>
+<script src="products.js?v=2026.11.12i"></script>
+<script src="refine.js?v=2026.11.12i"></script>
+<script src="orient.js?v=2026.11.12i"></script>
+<script src="camera.js?v=2026.11.12i"></script>
 <script>
 (function(){
 "use strict";
@@ -471,7 +474,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.12h";
+const VERSION="2026.11.12i";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
