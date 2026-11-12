@@ -452,10 +452,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.12c"></script>
-<script src="refine.js?v=2026.11.12c"></script>
-<script src="orient.js?v=2026.11.12c"></script>
-<script src="camera.js?v=2026.11.12c"></script>
+<script src="products.js?v=2026.11.12d"></script>
+<script src="refine.js?v=2026.11.12d"></script>
+<script src="orient.js?v=2026.11.12d"></script>
+<script src="camera.js?v=2026.11.12d"></script>
 <script>
 (function(){
 "use strict";
@@ -471,7 +471,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.12c";
+const VERSION="2026.11.12d";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -1823,16 +1823,17 @@ $("tSave").onclick=async()=>{
 /* ---------- 타일 계산기 ----------
    면적 = 가로 × 세로 (m²), 평수 = 면적 ÷ 3.3
    타일 수량 = 평수 올림 (데코타일 1박스 = 약 1평)
-   리무벌 스티커 = 면적 ÷ 스티커 한 장이 맡는 면적, 반올림 (최소 1장)
-     450: 타일 6장분 (0.45 × 0.45 × 6), 600: 타일 6장분 (0.6 × 0.6 × 6), 우드: 판재 4장분 (0.95 × 0.184 × 4)
-     기존 새로고침 계산기 예시(5m × 3m → 12, 7, 21장)에 맞춘 값 */
-const CALC={py:3.3,sticker:{cS450:.45*.45*6,cS600:.6*.6*6,cSWood:.95*.184*4}};
+   리무벌 스티커 = 박스 수 × 박스당 장수 × 한 장에 붙는 조각 ÷ 스티커 한 장 조각 수, 올림
+     450: 16장 × 4조각, 600: 9장 × 4조각, 우드: 19장 × 6조각, 스티커 한 장 28조각
+     기존 새로고침 계산기 결과 3가지(5×3, 4×4, 7×2.5)에 맞춰 짐작한 값 */
+const CALC={py:3.3,sheet:28,sticker:{cS450:[16,4],cS600:[9,4],cSWood:[19,6]}};
 function calcNum(v){const x=parseFloat(String(v).replace(/,/g,".").replace(/[^0-9.]/g,""));return isFinite(x)&&x>0?x:0;}
 function calcRun(){
   const a=calcNum($("cW").value)*calcNum($("cH").value),py=a/CALC.py;
   $("cArea").textContent=a.toFixed(2);$("cPy").textContent=py.toFixed(2);
-  $("cBox").textContent=a>0?Math.ceil(py-1e-9):0;
-  for(const id in CALC.sticker)$(id).textContent=a>0?Math.max(1,Math.round(a/CALC.sticker[id])):0;
+  const box=a>0?Math.ceil(py-1e-9):0;
+  $("cBox").textContent=box;
+  for(const id in CALC.sticker){const [n,k]=CALC.sticker[id];$(id).textContent=Math.ceil(box*n*k/CALC.sheet);}
 }
 for(const id of ["cW","cH"]){
   const el=$(id);
