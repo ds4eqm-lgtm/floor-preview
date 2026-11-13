@@ -454,10 +454,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.13a"></script>
-<script src="refine.js?v=2026.11.13a"></script>
-<script src="orient.js?v=2026.11.13a"></script>
-<script src="camera.js?v=2026.11.13a"></script>
+<script src="products.js?v=2026.11.13b"></script>
+<script src="refine.js?v=2026.11.13b"></script>
+<script src="orient.js?v=2026.11.13b"></script>
+<script src="camera.js?v=2026.11.13b"></script>
 <script>
 (function(){
 "use strict";
@@ -473,7 +473,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.13a";
+const VERSION="2026.11.13b";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -523,6 +523,7 @@ uniform sampler2D uPhoto,uMask,uShade,uAO;
 uniform sampler2DArray uTile;
 uniform float uLayers;
 uniform vec3 uExpo,uWB;
+uniform vec2 uKeep;
 uniform float uNoise;
 uniform vec2 uSize,uMaskTexel,uTileMM;
 uniform vec3 uH0,uH1,uH2;
@@ -570,7 +571,13 @@ void main(){
     vec3 lin=pow(max(t,vec3(0.)),vec3(2.2));
     float sh=texture(uShade,uv).r*2.;
     float ao=texture(uAO,uv).r;
-    lin*=uExpo*mix(1.,sh*ao,uShadeAmt);
+    /* 색을 알아볼 수 있게: 사진이 아주 어둡거나 밝아도 바닥 밝기가 원래 색의 일정 범위(uKeep) 밖으로 크게 안 벗어나게 부드럽게 묶음 */
+    vec3 mul=uExpo*mix(1.,sh*ao,uShadeAmt);
+    float e=max(dot(mul,vec3(.2126,.7152,.0722)),1e-4);
+    float kw=.07;
+    float e2=uKeep.x+kw*log(1.+exp((e-uKeep.x)/kw));
+    e2=uKeep.y-kw*log(1.+exp((uKeep.y-e2)/kw));
+    lin*=mul*(e2/e);
     vec3 srgb=pow(max(lin,vec3(0.)),vec3(1./2.2));
     /* 사진과 같은 정도의 자글자글한 노이즈 (매끈한 CG 느낌 없애기) */
     vec2 fc=floor(uv*uSize)+.5;
@@ -601,7 +608,7 @@ function initGL(){
   const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   const loc=gl.getAttribLocation(prog,"p");gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-  ["uPhoto","uMask","uShade","uTile","uAO","uExpo","uWB","uNoise","uSize","uMaskTexel","uTileMM","uLayers","uH0","uH1","uH2","uPattern","uRot","uShadeAmt","uSplit","uMaskView","uGrid","uHasTile","uView"].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
+  ["uPhoto","uMask","uShade","uTile","uAO","uExpo","uKeep","uWB","uNoise","uSize","uMaskTexel","uTileMM","uLayers","uH0","uH1","uH2","uPattern","uRot","uShadeAmt","uSplit","uMaskView","uGrid","uHasTile","uView"].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
   TEXN.forEach((n,i)=>{TEX[n]=gl.createTexture();gl.uniform1i(U[n==="ao"?"uAO":"u"+n[0].toUpperCase()+n.slice(1)],i);});
   const one=document.createElement("canvas");one.width=one.height=1;const ox=one.getContext("2d");ox.fillStyle="#fff";ox.fillRect(0,0,1,1);
   upload("ao",one,false);
@@ -626,6 +633,11 @@ function upload(name,src,mip){
 /* 밝은 색 예쁘게: 방 밝기에 맞추면 흰색, 크림색 계열이 칙칙해 보여서, 밝은 색일수록 더 밝혀 줌
    짙은 색은 그대로, 바닥이 제품 원래 색보다 밝아지지는 않게 상한 */
 const BRIGHT_LIFT=1.42;
+/* 색 알아보기 범위: 바닥 어느 곳이든 원래 색 밝기의 이 범위(선형 밝기 배수) 안으로 부드럽게 묶음
+   0.42 는 화면 밝기로 약 67퍼센트, 1.12 는 약 105퍼센트 (그림자와 창가 빛 흐름은 이 안에서 살림) */
+const KEEP=[.42,1.12];
+/* 아주 어두운 사진: 벽 기준 노출이 0.55 아래면 덜 어둡게 (어두운 정도를 절반쯤으로) */
+const DARK_EXPO=.55;
 function layersLum(layers){
   try{
     const c=document.createElement("canvas");c.width=c.height=16;const x=c.getContext("2d",{willReadFrequently:true});
@@ -699,6 +711,7 @@ function draw(){
   const ex=S.expo||[1,1,1],bk=S.bright||1;
   const lf=brightLift(ex);
   gl.uniform3f(U.uExpo,ex[0]*bk*lf,ex[1]*bk*lf,ex[2]*bk*lf);
+  gl.uniform2f(U.uKeep,KEEP[0],KEEP[1]);
   gl.uniform1f(U.uNoise,S.noise||0);
   gl.uniform1f(U.uSplit,S.compare?S.split:-1);
   gl.uniform1f(U.uMaskView,S.brush?1:0);
@@ -812,13 +825,15 @@ function computeLighting(){
   /* 원래 바닥이 아주 밝은 색(반사율 0.75)부터 아주 어두운 색(0.06) 사이라는 점으로 노출 범위를 묶음 */
   if(floorMed)expo=Math.max(floorMed/.75,Math.min(floorMed/.06,expo));
   expo=Math.max(.15,Math.min(1.25,expo));
+  S.expoRaw=expo;
+  if(expo<DARK_EXPO)expo=DARK_EXPO*Math.sqrt(expo/DARK_EXPO);
   const cl=.2126*cast[0]+.7152*cast[1]+.0722*cast[2];
   S.expo=cast.map(v=>v/cl*expo);
   S.noise=estimateNoise();
   S.aoCanvas=computeAO();upload("ao",S.aoCanvas,false);
   S.cctEst=cct&&Number.isFinite(cct)?Math.max(2000,Math.min(12000,cct)):null;
   updateWB();
-  S.lightInfo="노출 "+expo.toFixed(2)+"("+how+") 조명색 "+cast.map(v=>v.toFixed(2)).join("/")+" 색온도 약 "+(S.cctEst?Math.round(S.cctEst):"모름")+"K 노이즈 "+S.noise.toFixed(4);
+  S.lightInfo="노출 "+expo.toFixed(2)+(S.expoRaw!==expo?"(원래 "+S.expoRaw.toFixed(2)+")":"")+"("+how+") 조명색 "+cast.map(v=>v.toFixed(2)).join("/")+" 색온도 약 "+(S.cctEst?Math.round(S.cctEst):"모름")+"K 노이즈 "+S.noise.toFixed(4);
 }
 /* ---------- 조명 색온도 ----------
    색온도(K) → 그 빛의 색: 플랑크 궤적 근사식(Kim 2002) → XYZ → 선형 sRGB, 밝기 1로 맞춤 */
