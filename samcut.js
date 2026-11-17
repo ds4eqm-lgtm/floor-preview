@@ -1,10 +1,14 @@
 /* 물건 테두리로 바닥 다시 오리기 (Segment Anything 작은 모델 SlimSAM)
-   첫 번째 AI(바닥 찾기)가 문 아래, 가구 다리처럼 바닥과 색이 비슷한 물건까지 바닥에 넣는 걸 막음
+   첫 번째 AI(바닥 찾기)가 놓치거나 더 넣은 곳을 물건 테두리를 따라 고침
    방법
-   1 바닥 한가운데 몇 곳은 바닥이라고(+), 바닥 바깥 경계 근처 몇 곳은 바닥이 아니라고(-) SAM 에 알려줌
-   2 SAM 이 물건 테두리를 따라 오린 바닥 모양을 받음
-   3 첫 번째 AI 는 바닥이라는데 SAM 은 아니라는 부분 중에서, 바닥 가장자리에 붙어 있는 조각만 뺌
-      (바닥 한가운데 페인트 자국이나 그림자처럼 안쪽에 떠 있는 조각은 그대로 둠)
+   1 바닥 한가운데 몇 곳은 바닥이라고(+), 바닥에서 조금 떨어진 벽, 문 쪽 몇 곳은 바닥이 아니라고(-) SAM 에 알려줌
+     (바닥과 같은 재질로 보이는 곳에는 - 점을 안 찍음: 첫 번째 AI 가 놓친 바닥일 수 있어서)
+   2 SAM 이 물건 테두리를 따라 오린 바닥 모양 몇 가지를 받음
+   3 빼기: 첫 번째 AI 는 바닥, SAM 은 아님 → 바닥 가장자리에 붙고 두께 있는 덩어리만 뺌 (문 아래, 가구 다리)
+   4 채우기: SAM 은 바닥, 첫 번째 AI 는 아님, 색도 바닥과 같은 재질 → 바닥에 붙어 있고 얕은 덩어리만 채움 (문턱 앞, 가구 사이)
+      벽처럼 바닥에서 위로 길게 뻗는 덩어리는 안 채움
+   5 흐릿한 경계는 SAM 테두리 쪽으로 또렷하게
+   바닥 한가운데 떠 있는 조각(페인트 자국, 그림자)과 경계를 따라 가늘게 깎이는 부분은 그대로 둠
    모델 파일은 models/slimsam 에 같이 올려둠 (처음 한 번만 받고 브라우저에 저장) */
 (function(){
   let samP=null;
@@ -86,12 +90,27 @@
     const inputs=await processor(image);
     const emb=await model.get_image_embeddings(inputs);
     const t2=performance.now();
+    /* 사진 색 (작은 칸) 과 바닥 색 분포: 바닥과 같은 재질인지 보는 데 씀 */
+    const pc=document.createElement("canvas");pc.width=w;pc.height=h;
+    const px=pc.getContext("2d",{willReadFrequently:true});px.drawImage(photo,0,0,w,h);
+    const pd=px.getImageData(0,0,w,h).data,cr=new Float32Array(n),cg=new Float32Array(n),lum=new Float32Array(n);
+    for(let i=0;i<n;i++){const r=pd[i*4]+1,g=pd[i*4+1]+1,b=pd[i*4+2]+1,t=r+g+b;cr[i]=r/t;cg[i]=g/t;lum[i]=Math.log(t);}
     /* 점 고르기 (작은 칸 기준) */
     const Din=distIn(ai,w,h,true),out=new Uint8Array(n);for(let i=0;i<n;i++)out[i]=ai[i]?0:1;
     const Dout=distIn(out,w,h),S=Math.max(w,h);
     let maxIn=0;for(let i=0;i<n;i++)if(Din[i]>maxIn)maxIn=Din[i];
+    /* 바닥 안쪽 색 평균과 퍼짐 */
+    let m1=0,m2=0,ml=0,cnt=0;const core=Math.max(2,maxIn*.2);
+    for(let i=0;i<n;i++)if(Din[i]>=core){m1+=cr[i];m2+=cg[i];ml+=lum[i];cnt++;}
+    m1/=cnt||1;m2/=cnt||1;ml/=cnt||1;
+    let v1=0,v2=0,vl=0;for(let i=0;i<n;i++)if(Din[i]>=core){v1+=(cr[i]-m1)**2;v2+=(cg[i]-m2)**2;vl+=(lum[i]-ml)**2;}
+    const s1=Math.max(.006,Math.sqrt(v1/(cnt||1))),s2=Math.max(.006,Math.sqrt(v2/(cnt||1))),sl=Math.max(.15,Math.sqrt(vl/(cnt||1)));
+    /* 바닥과 같은 재질처럼 보이는지 (색 비율은 엄격하게, 밝기는 그림자 때문에 느슨하게) */
+    const floorLike=i=>((cr[i]-m1)/s1)**2+((cg[i]-m2)/s2)**2<9&&Math.abs(lum[i]-ml)<Math.max(.7,sl*3);
     const pos=pickSpread(Din,w,h,8,S*.12,Math.max(2,maxIn*.35));
-    const neg=pickRing(Dout,w,h,10,S*.02,S*.06,S*.1);
+    /* 바닥 아님 점: 바닥 바깥 띠에서, 바닥과 같은 재질로 보이는 곳(첫 번째 AI가 놓친 바닥일 수 있음)은 빼고 */
+    const Dneg=Float32Array.from(Dout);for(let i=0;i<n;i++)if(floorLike(i))Dneg[i]=0;
+    const neg=pickRing(Dneg,w,h,10,S*.07,S*.2,S*.1);
     const [rh,rw]=inputs.reshaped_input_sizes[0];
     const toR=p=>[(p[0]+.5)/w*rw,(p[1]+.5)/h*rh];
     const runPts=async(pts,lab)=>{
@@ -108,7 +127,7 @@
     };
     const cands=[];
     if(pos.length){
-      cands.push(...await runPts([...pos,...neg],[...pos.map(()=>1),...neg.map(()=>0)]));
+      if(neg.length)cands.push(...await runPts([...pos,...neg],[...pos.map(()=>1),...neg.map(()=>0)]));
       cands.push(...await runPts(pos,pos.map(()=>1)));
     }
     if(!cands.length)return {soft,info:"SAM 점 없음"};
@@ -120,46 +139,55 @@
       if(!best||c.val>best.val)best=c;
     }
     if(best.iou<.6)return {soft,info:"SAM 안 맞음 iou "+best.iou.toFixed(2)};
-    /* 첫 번째 AI 는 바닥, SAM 은 아님 → 조각 나누기 */
-    const sam=best.m,diff=new Uint8Array(n);
-    for(let i=0;i<n;i++)diff[i]=ai[i]&&sam[i]<.35?1:0;
-    /* 들쭉날쭉한 가장자리 털어내기 (깎았다 다시 불리기): 덩어리진 조각만 남김 */
-    const r0=Math.max(2,S*.005),D0=distIn(diff,w,h,false),ne=new Uint8Array(n);
-    for(let i=0;i<n;i++)ne[i]=D0[i]>r0?0:1;
-    const Dn=distIn(ne,w,h,false);
-    for(let i=0;i<n;i++)diff[i]=diff[i]&&Dn[i]<=r0+.5?1:0;
-    const Dd=distIn(diff,w,h,false),Dai=distIn(ai,w,h,false);
-    const lab=new Int32Array(n).fill(-1),comps=[],q=new Int32Array(n);
-    for(let i=0;i<n;i++){
-      if(!diff[i]||lab[i]>=0)continue;
-      const id=comps.length;let qh=0,qt=0,area=0,edge=0,thick=0;q[qt++]=i;lab[i]=id;
-      while(qh<qt){const j=q[qh++];area++;if(Dd[j]>thick)thick=Dd[j];const x=j%w,y=(j/w)|0;
-        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const xx=x+dx,yy=y+dy;
-          if(xx<0||yy<0||xx>=w||yy>=h)continue;const k=yy*w+xx;
-          if(diff[k]&&lab[k]<0){lab[k]=id;q[qt++]=k;}}
-        if(Dai[j]<=r0+1.5)edge++;}
-      comps.push({area,edge,thick});
-    }
-    const cut=new Uint8Array(comps.length);let cutArea=0,nCut=0;
-    const minA=n*.0006,minT=Math.max(6,S*.012);
-    for(let c=0;c<comps.length;c++){
-      const C=comps[c];
-      /* 바닥 가장자리(바닥 아닌 곳)에 맞닿고, 두께가 있고(경계 따라 가늘게 깎이는 건 무시), 너무 크지 않은 조각만 */
-      if(C.edge>=3&&C.area>=minA&&C.thick>=minT&&C.area<aiArea*.25){cut[c]=1;cutArea+=C.area;nCut++;}
-    }
-    const outSoft=Float32Array.from(soft);
-    if(nCut){
-      const rm=new Float32Array(n);for(let i=0;i<n;i++)if(lab[i]>=0&&cut[lab[i]])rm[i]=1;
-      /* 경계 살짝 부드럽게 */
-      const b=new Float32Array(n);
+    for(const c of cands){let a=0,inn=0;for(let i=0;i<n;i++){if(c.m[i]>.5){a++;if(ai[i])inn++;}}c.rec=inn/aiArea;c.size=a/aiArea;}
+    const candInfo=cands.map(c=>c.iou.toFixed(2)+"/"+c.score.toFixed(2)+"/"+c.rec.toFixed(2)+"/"+c.size.toFixed(2)).join(" ");
+    /* 채우기용: 첫 번째 AI 바닥을 거의 다 덮으면서(95퍼센트 이상) 조금 더 넓게 본 것 중 가장 넓은 것 (놓친 바닥까지 본 SAM 답) */
+    let wide=best;
+    for(const c of cands)if(c.rec>=.95&&c.score>=.9&&c.size<=1.35&&c.size>wide.size)wide=c;
+    const sam=best.m;
+    const r0=Math.max(2,S*.005),minA=n*.0006,minT=Math.max(6,S*.012);
+    /* 덩어리 찾기: 들쭉날쭉한 가장자리를 털어내고(깎았다 다시 불리기), 바닥 경계에 맞닿고 두께 있는 덩어리만 */
+    const pieces=(diff,touchD,maxArea,maxDepth)=>{
+      const D0=distIn(diff,w,h,false),ne=new Uint8Array(n);
+      for(let i=0;i<n;i++)ne[i]=D0[i]>r0?0:1;
+      const Dn=distIn(ne,w,h,false);
+      for(let i=0;i<n;i++)diff[i]=diff[i]&&Dn[i]<=r0+.5?1:0;
+      const Dd=distIn(diff,w,h,false);
+      const lab=new Int32Array(n).fill(-1),q=new Int32Array(n),keep=new Uint8Array(n);let area=0,cnt=0;
+      for(let i=0;i<n;i++){
+        if(!diff[i]||lab[i]>=0)continue;
+        const id=i;let qh=0,qt=0,a=0,edge=0,thick=0,deep=0;q[qt++]=i;lab[i]=id;
+        while(qh<qt){const j=q[qh++];a++;if(Dd[j]>thick)thick=Dd[j];const x=j%w,y=(j/w)|0;
+          for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const xx=x+dx,yy=y+dy;
+            if(xx<0||yy<0||xx>=w||yy>=h)continue;const k=yy*w+xx;
+            if(diff[k]&&lab[k]<0){lab[k]=id;q[qt++]=k;}}
+          if(touchD[j]<=r0+1.5)edge++;if(touchD[j]>deep)deep=touchD[j];}
+        if(edge>=3&&a>=minA&&thick>=minT&&a<maxArea&&deep<=maxDepth){for(let t=0;t<qt;t++)keep[q[t]]=1;area+=a;cnt++;}
+      }
+      return {keep,area,cnt};
+    };
+    const feather=m=>{const b=new Float32Array(n);
       for(let y=0;y<h;y++)for(let x=0;x<w;x++){let s=0,c=0;
-        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=w||yy>=h)continue;s+=rm[yy*w+xx];c++;}
-        b[y*w+x]=s/c;}
-      for(let i=0;i<n;i++)outSoft[i]=Math.min(outSoft[i],1-Math.min(1,Math.max(rm[i],b[i]*1.2)));
-    }
+        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=w||yy>=h)continue;s+=m[yy*w+xx];c++;}
+        b[y*w+x]=Math.max(m[y*w+x],Math.min(1,s/c*1.2));}
+      return b;};
+    /* 1 빼기: 첫 번째 AI 는 바닥, SAM 은 아님 (문 아래, 가구 다리) */
+    const dCut=new Uint8Array(n);for(let i=0;i<n;i++)dCut[i]=ai[i]&&sam[i]<.35?1:0;
+    const Dai=distIn(ai,w,h,false);
+    const C=pieces(dCut,Dai,aiArea*.25,Infinity);
+    /* 2 채우기: SAM 은 바닥, 첫 번째 AI 는 아님, 색도 바닥과 같은 재질 (문턱 앞, 가구 사이에서 놓친 바닥) */
+    const samW=wide.m,dAdd=new Uint8Array(n);for(let i=0;i<n;i++)dAdd[i]=!ai[i]&&samW[i]>.65&&floorLike(i)?1:0;
+    /* 바닥에서 너무 멀리 뻗는 조각(벽처럼 위로 길게 이어진 것)은 안 채움: 문턱 앞, 가구 사이처럼 얕은 곳만 */
+    const A=pieces(dAdd,Dout,aiArea*.2,S*.1);
+    const outSoft=Float32Array.from(soft);
+    if(C.cnt){const f=feather(C.keep);for(let i=0;i<n;i++)outSoft[i]=Math.min(outSoft[i],1-f[i]);}
+    if(A.cnt){const f=feather(A.keep);for(let i=0;i<n;i++)outSoft[i]=Math.max(outSoft[i],f[i]);}
+    /* 3 경계 또렷하게: 두 AI 가 거의 같게 본 곳에서 흐릿한 경계(0.15~0.85)는 SAM 테두리 쪽으로 */
+    let sharp=0;
+    if(best.iou>=.8)for(let i=0;i<n;i++){const v=outSoft[i];if(v>.15&&v<.85&&!C.keep[i]&&!A.keep[i]){const t=sam[i]>.5?Math.max(v,.5+.5*sam[i]):Math.min(v,.5*sam[i]);outSoft[i]=v*.35+t*.65;sharp++;}}
     const t3=performance.now();
-    return {soft:outSoft,cutArea:cutArea/aiArea,nCut,iou:best.iou,pos,neg,sam,
-      info:"SAM iou "+best.iou.toFixed(2)+" 뺀 조각 "+nCut+"("+(cutArea/aiArea*100).toFixed(1)+"%) 준비 "+Math.round(t1-t0)+"ms 읽기 "+Math.round(t2-t1)+"ms 오리기 "+Math.round(t3-t2)+"ms"};
+    return {soft:outSoft,iou:best.iou,pos,neg,sam:samW,
+      cands:candInfo,info:"SAM iou "+best.iou.toFixed(2)+" 뺀 조각 "+C.cnt+"("+(C.area/aiArea*100).toFixed(1)+"%) 채운 조각 "+A.cnt+"("+(A.area/aiArea*100).toFixed(1)+"%) 또렷 "+sharp+" 준비 "+Math.round(t1-t0)+"ms 읽기 "+Math.round(t2-t1)+"ms 오리기 "+Math.round(t3-t2)+"ms"};
   }
   window.FloorSAM={refine,ensureSam};
 })();
