@@ -454,11 +454,11 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.17b"></script>
-<script src="refine.js?v=2026.11.17b"></script>
-<script src="orient.js?v=2026.11.17b"></script>
-<script src="camera.js?v=2026.11.17b"></script>
-<script src="samcut.js?v=2026.11.17b"></script>
+<script src="products.js?v=2026.11.17c"></script>
+<script src="refine.js?v=2026.11.17c"></script>
+<script src="orient.js?v=2026.11.17c"></script>
+<script src="camera.js?v=2026.11.17c"></script>
+<script src="samcut.js?v=2026.11.17c"></script>
 <script>
 (function(){
 "use strict";
@@ -474,9 +474,42 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.17b";
+const VERSION="2026.11.17c";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
+/* 바닥 찾는 도중 휴대폰 메모리가 모자라 화면이 꺼졌다 다시 열리는지 알아내기 위한 표시
+   AIRUN: 지금 어느 단계(seg 바닥 찾기, sam 테두리 다듬기)를 돌리는 중인지
+   LITE: 한 번 꺼진 휴대폰은 다음부터 가벼운 방식(테두리 다듬기 끔, 작은 AI, 좌우평균 끔)으로 */
+const AIRUN_KEY="floorAiRun",LITE_KEY="floorLite";
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
+function aiMark(stage){lsSet(AIRUN_KEY,JSON.stringify({id:S.histId,stage,t:Date.now()}));}
+function aiClear(){lsDel(AIRUN_KEY);}
+/* 손님이 직접 다른 데로 가거나 창을 닫으면 표시를 지움 (메모리 때문에 꺼질 때는 이게 안 불림) */
+window.addEventListener("pagehide",aiClear);
+function aiCrashed(){
+  const v=lsGet(AIRUN_KEY);aiClear();
+  if(!v)return null;
+  try{const o=JSON.parse(v);return o&&Date.now()-o.t<15*60*1000?o:null;}catch(e){return null;}
+}
+/* 가벼운 방식: 한 번 꺼졌던 휴대폰, 메모리가 작다고 알려주는 휴대폰, 주소에 lite=1 */
+function liteMode(){
+  if(params.get("lite")==="0")return false;
+  if(params.get("lite")==="1"||lsGet(LITE_KEY)==="1")return true;
+  const dm=navigator.deviceMemory;return !!dm&&dm<4;
+}
+/* 두 번째 AI(SAM)는 돌리는 동안 메모리를 2GB 가까이 써서 휴대폰, 태블릿에서는 화면이 꺼짐 → 컴퓨터에서만
+   주소에 sam=1 이면 휴대폰에서도 (시험용), sam=0 이면 컴퓨터에서도 끔 */
+function samAllowed(){
+  const q=params.get("sam");
+  if(q==="1")return true;
+  if(q==="0"||liteMode())return false;
+  try{if(matchMedia("(pointer:coarse)").matches&&!matchMedia("(any-pointer:fine)").matches)return false;}catch(e){}
+  if(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||""))return false;
+  const dm=navigator.deviceMemory;if(dm&&dm<8)return false;
+  return true;
+}
 
 if(SHOP.name){const l=$("logo");if(l)l.alt=SHOP.name;}
 $("gpuNote").textContent="버전 "+VERSION;
@@ -952,7 +985,7 @@ function ensureModel(){
         if(S.aiBusy&&S.aiTok===S.loadToken)chip("바닥 인식 준비 중 "+Math.round(a/b*100)+"% (처음 한 번만 받아요)","busy");}
     };
     let last;
-    for(const m of MODELS){
+    for(const m of (liteMode()?MODELS.slice().reverse():MODELS)){
       try{const p=await tf.pipeline("image-segmentation",m,{device:"wasm",dtype:"q8",progress_callback:cb});segName=m;return p;}
       catch(e){last=e;console.warn("model failed",m,e);}
     }
@@ -1041,7 +1074,7 @@ async function floorPrior(seg){
       const t0=performance.now();
       const a=await runModel(seg,mw,mh,false,ids,oids,useSem);
       const ms=performance.now()-t0;let tta=false;
-      if(ms<2500&&params.get("tta")!=="0"){
+      if(ms<2500&&params.get("tta")!=="0"&&!liteMode()){
         const b=await runModel(seg,mw,mh,true,ids,oids,useSem);
         if(b.w===a.w&&b.h===a.h){
           for(let i=0;i<a.p.length;i++){a.p[i]=(a.p[i]+b.p[i])/2;a.o[i]=(a.o[i]+b.o[i])/2;}
@@ -1096,7 +1129,7 @@ function queueDetect(tok){
 async function detectFloor(tok){
   if(tok==null)tok=S.loadToken;
   const live=()=>tok===S.loadToken;
-  S.aiBusy=true;S.aiTok=tok;chip("바닥 찾는 중이에요","busy");
+  S.aiBusy=true;S.aiTok=tok;chip("바닥 찾는 중이에요","busy");aiMark("seg");
   try{
     const seg=await ensureModel();
     if(!live())return;
@@ -1125,11 +1158,12 @@ async function detectFloor(tok){
       }catch(e){console.error("refine failed",e);note=" · 다듬기 실패";}
     }
     /* 두 번째 AI(SAM)로 문, 가구처럼 바닥과 색이 비슷한 물건 테두리를 따라 한 번 더 오림 (samcut.js) */
-    if(window.FloorSAM&&params.get("sam")!=="0"){
+    if(window.FloorSAM&&samAllowed()){
       try{
         chip("문, 가구 테두리 다듬는 중이에요","busy");
         await new Promise(r=>setTimeout(r,30));
         if(!live())return;
+        aiMark("sam");
         const r=await window.FloorSAM.refine({tf:TFMOD,photo:S.photoCanvas,soft,w:ww,h:wh,base:new URL("models/",location.href).href,
           onProgress:f=>{if(live())chip("테두리 다듬기 준비 중 "+Math.round(f*100)+"% (처음 한 번만 받아요)","busy");}});
         if(!live())return;
@@ -1143,7 +1177,7 @@ async function detectFloor(tok){
       od.data[i*4]=od.data[i*4+1]=od.data[i*4+2]=v;od.data[i*4+3]=255;if(v>127)area++;
     }
     x.putImageData(od,0,0);
-    S.aiInfo=pr.info+note;
+    S.aiInfo=pr.info+note+(liteMode()?" · 가벼운 방식 "+segName.split("-")[1]:"");
     S.sem=pr.sem?{ceil:pr.sem.ceil,wall:pr.sem.wall,door:pr.sem.door||null,w:pr.w,h:pr.h}:null;
     if(params.get("debug")==="1")$("gpuNote").textContent="버전 "+VERSION+" · "+S.aiInfo;
     if(area<soft.length*.03){fallbackMask();applyAuto();chip("바닥을 잘 못 찾았어요. 바닥 고치기로 칠해 주세요","warn");}
@@ -1155,7 +1189,7 @@ async function detectFloor(tok){
     fallbackMask();applyAuto();
     chip("자동 인식이 안 됐어요. 바닥 고치기로 범위를 칠해 주세요","warn");
     histSave(true);
-  }finally{if(S.aiTok===tok)S.aiBusy=false;}
+  }finally{if(S.aiTok===tok){S.aiBusy=false;aiClear();}}
 }
 /* 바닥 경계선과 원래 바닥 줄눈으로 방의 가로세로 방향, 카메라 기울기 찾기 */
 function orientFloor(p0){
@@ -2003,9 +2037,24 @@ async function start(){
   selectProduct(idx);
   initCT();
   S.grid=params.get("debug")==="1"&&params.get("grid")==="1";
-  histInit();
+  /* 바닥 찾다가 화면이 꺼졌다 다시 열린 거면: 다음부터 가벼운 방식으로 하고, 방금 사진을 다시 불러와서 다시 찾음
+     가벼운 방식으로도 꺼졌으면 또 꺼지지 않게 다시 찾지는 않음 */
+  const crash=aiCrashed(),wasLite=lsGet(LITE_KEY)==="1";
+  if(crash)lsSet(LITE_KEY,"1");
+  const histP=histInit();
+  if(crash&&crash.id&&!wasLite){
+    await histP;
+    if(histOK&&histList.some(m=>m.id===crash.id)){
+      await histRestore(crash.id);
+      await detectQ;
+      if(S.histId===crash.id&&!$("chip").classList.contains("warn"))chip("휴대폰 메모리가 모자라 화면이 새로 열렸어요. 가벼운 방식으로 다시 찾았어요","");
+      return;
+    }
+  }
   const interrupted=pickInterrupted();
-  const welcome=()=>interrupted
+  const welcome=()=>crash
+    ?chip("이 사진은 휴대폰에서 처리하기 너무 무거웠어요. 사진을 다시 고르면 가벼운 방식으로 찾아요","warn")
+    :interrupted
     ?chip("사진 고르는 동안 화면이 새로 열렸어요. 다른 앱을 닫고 앨범에서 고르기로 다시 해 주세요","warn")
     :chip("예시 방이에요. 우리집 사진을 올려 보세요","");
   const tok=newLoad();
@@ -2036,7 +2085,7 @@ async function start(){
 }
 window.__sim={S,setMask:src=>{setMask(src);applyAuto();},render,draw,selectProduct,homography,focal,
   cct:{rgb:cctRGB,est:rgbCCT,set:k=>{S.cctSet=k;updateWB();render();}},lens:applyLens,calibrate:()=>{calibrateScale();render();return S.camH;},
-  hist:{list:()=>histList.map(m=>({id:m.id,t:m.t,hasMask:m.hasMask,params:m.params})),restore:histRestore,del:histDelete,idle:()=>histQ,detect:()=>detectQ}};
+  hist:{list:()=>histList.map(m=>({id:m.id,t:m.t,hasMask:m.hasMask,params:m.params})),restore:histRestore,del:histDelete,idle:()=>histQ,detect:()=>detectQ},samAllowed,liteMode};
 if(params.get("debug")==="1")window.__sim.dbg={ensureModel,floorPrior,floorPriorPipeline,upsample,modelSize};
 start();
 })();
