@@ -454,10 +454,11 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 </div>
 
 <!-- products.js, refine.js, orient.js, camera.js 를 고치면 아래 v= 값과 VERSION 값을 같이 올려야 손님 폰에 바로 반영됨 -->
-<script src="products.js?v=2026.11.13b"></script>
-<script src="refine.js?v=2026.11.13b"></script>
-<script src="orient.js?v=2026.11.13b"></script>
-<script src="camera.js?v=2026.11.13b"></script>
+<script src="products.js?v=2026.11.17a"></script>
+<script src="refine.js?v=2026.11.17a"></script>
+<script src="orient.js?v=2026.11.17a"></script>
+<script src="camera.js?v=2026.11.17a"></script>
+<script src="samcut.js?v=2026.11.17a"></script>
 <script>
 (function(){
 "use strict";
@@ -473,7 +474,7 @@ const FLOORISH=new Set(["floor","flooring"]);
 /* 창문, 문, 바깥 풍경: 이 둘레에 떨어져 있는 바닥 조각은 베란다나 창밖으로 봄 */
 const OPENING=new Set(["windowpane","door","screen door","curtain","blind","railing","bannister","fence","sky","building","skyscraper","house","tree","mountain","hill","palm"]);
 const HEIC_URL="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-const VERSION="2026.11.13b";
+const VERSION="2026.11.17a";
 const bust=u=>u+(u.indexOf("?")<0?"?":"&")+"v="+VERSION;
 const PICK_KEY="floorPickAt";
 
@@ -1122,6 +1123,18 @@ async function detectFloor(tok){
         const t1=performance.now(),r=window.FloorRefine.refine(img.data,ww,wh,prior,{open});
         soft=r.soft;note=" · 다듬기 "+Math.round(performance.now()-t1)+"ms"+(r.patterned?" 무늬":"");
       }catch(e){console.error("refine failed",e);note=" · 다듬기 실패";}
+    }
+    /* 두 번째 AI(SAM)로 문, 가구처럼 바닥과 색이 비슷한 물건 테두리를 따라 한 번 더 오림 (samcut.js) */
+    if(window.FloorSAM&&params.get("sam")!=="0"){
+      try{
+        chip("문, 가구 테두리 다듬는 중이에요","busy");
+        await new Promise(r=>setTimeout(r,30));
+        if(!live())return;
+        const r=await window.FloorSAM.refine({tf:TFMOD,photo:S.photoCanvas,soft,w:ww,h:wh,base:new URL("models/",location.href).href,
+          onProgress:f=>{if(live())chip("테두리 다듬기 준비 중 "+Math.round(f*100)+"% (처음 한 번만 받아요)","busy");}});
+        if(!live())return;
+        soft=r.soft;note+=" · "+r.info;
+      }catch(e){console.warn("sam failed",e);note+=" · SAM 실패";}
     }
     let area=0;
     const od=x.createImageData(ww,wh);
