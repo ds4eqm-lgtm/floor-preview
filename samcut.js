@@ -176,7 +176,10 @@
     const Dai=distIn(ai,w,h,false);
     const C=pieces(dCut,Dai,aiArea*.25,Infinity);
     /* 2 채우기: SAM 은 바닥, 첫 번째 AI 는 아님, 색도 바닥과 같은 재질 (문턱 앞, 가구 사이에서 놓친 바닥) */
-    const samW=wide.m,dAdd=new Uint8Array(n);for(let i=0;i<n;i++)dAdd[i]=!ai[i]&&samW[i]>.65&&floorLike(i)?1:0;
+    /* 다듬기 단계에서 일부러 뺀 곳(걸레받이, 검은 다리)은 다시 채우지 않음 (o.block, 둘레 2칸까지) */
+    let blk=null;
+    if(o.block){blk=Uint8Array.from(o.block);for(let k=0;k<2;k++){const b2=Uint8Array.from(blk);for(let i=0;i<n;i++)if(!blk[i]){const x=i%w;if((x>0&&blk[i-1])||(x<w-1&&blk[i+1])||(i>=w&&blk[i-w])||(i<n-w&&blk[i+w]))b2[i]=1;}blk=b2;}}
+    const samW=wide.m,dAdd=new Uint8Array(n);for(let i=0;i<n;i++)dAdd[i]=!ai[i]&&samW[i]>.65&&floorLike(i)&&!(blk&&blk[i])?1:0;
     /* 바닥에서 너무 멀리 뻗는 조각(벽처럼 위로 길게 이어진 것)은 안 채움: 문턱 앞, 가구 사이처럼 얕은 곳만 */
     const A=pieces(dAdd,Dout,aiArea*.2,S*.1);
     const outSoft=Float32Array.from(soft);
@@ -184,7 +187,7 @@
     if(A.cnt){const f=feather(A.keep);for(let i=0;i<n;i++)outSoft[i]=Math.max(outSoft[i],f[i]);}
     /* 3 경계 또렷하게: 두 AI 가 거의 같게 본 곳에서 흐릿한 경계(0.15~0.85)는 SAM 테두리 쪽으로 */
     let sharp=0;
-    if(best.iou>=.8)for(let i=0;i<n;i++){const v=outSoft[i];if(v>.15&&v<.85&&!C.keep[i]&&!A.keep[i]){const t=sam[i]>.5?Math.max(v,.5+.5*sam[i]):Math.min(v,.5*sam[i]);outSoft[i]=v*.35+t*.65;sharp++;}}
+    if(best.iou>=.8)for(let i=0;i<n;i++){const v=outSoft[i];if(v>.15&&v<.85&&!C.keep[i]&&!A.keep[i]&&!(blk&&blk[i])){const t=sam[i]>.5?Math.max(v,.5+.5*sam[i]):Math.min(v,.5*sam[i]);outSoft[i]=v*.35+t*.65;sharp++;}}
     const t3=performance.now();
     return {soft:outSoft,iou:best.iou,pos,neg,sam:samW,
       cands:candInfo,info:"SAM iou "+best.iou.toFixed(2)+" 뺀 조각 "+C.cnt+"("+(C.area/aiArea*100).toFixed(1)+"%) 채운 조각 "+A.cnt+"("+(A.area/aiArea*100).toFixed(1)+"%) 또렷 "+sharp+" 준비 "+Math.round(t1-t0)+"ms 읽기 "+Math.round(t2-t1)+"ms 오리기 "+Math.round(t3-t2)+"ms"};
