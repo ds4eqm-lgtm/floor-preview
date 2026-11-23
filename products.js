@@ -609,5 +609,5 @@ window.PRODUCTS = [
 // 상단 가게 이름과 저장 사진 귀퉁이에 들어가는 문구
 window.SHOP = {
   name: "새로고침",
-  tagline: "데코타일 미리보기"
+  tagline: "DECOTILE-PLAN"
 };
