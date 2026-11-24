@@ -167,3 +167,6 @@ debug=1 일 때 주소 뒤에 alb, lift, keep0, keep1, dexpo, lk, lq 로 숫자�
 사진촬영, 앨범에서 사진 가져오기, 사진저장 버튼
 아래 남색 메뉴 줄: 컬러옵션, 조명컬러, 바닥고치기, 최근 사진, 타일계산기 (아이콘은 새로 그린 선 아이콘)
 굵은 글씨는 제목, 상단 문구, 제품 이름, 배율에만 씀 (fonts/pretendard-bold.woff2)
+
+2026.11.24c 타일계산기 아이콘 교체
+아래 메뉴 줄 타일계산기 아이콘을 포스퍼 아이콘(Phosphor Icons)의 계산 기호(math-operations)로 바꿈. MIT 라이선스, 허가서는 licenses/Phosphor-Icons-LICENSE.txt
