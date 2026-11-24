@@ -13,7 +13,7 @@ https://ds4eqm-lgtm.github.io/floor-preview/?item=제품코드
 
 파일 구성
 index.html  화면과 기능 전체
-fonts/paperlogy-regular.woff2  화면 글꼴 페이퍼로지 레귤러 (SIL OFL 1.1 무료 글꼴, 상업용 가능)
+fonts/pretendard-regular.woff2  화면 글꼴 프리텐다드 레귤러 (SIL OFL 1.1 무료 글꼴, 상업용 가능, 라이선스는 fonts/Pretendard-LICENSE.txt)
 refine.js  AI가 찾은 바닥 경계를 사진의 벽, 문틀, 걸레받이 선에 맞춰 다듬고 창문 너머 바닥은 빼는 기능
 orient.js  바닥 경계선과 원래 바닥 줄눈으로 방의 가로세로 방향과 카메라 기울기를 찾아 바둑판 방향을 맞추는 기능
 samcut.js  두 번째 AI(SlimSAM)로 문, 가구처럼 바닥과 색이 비슷한 물건을 바닥에서 자동으로 빼는 기능
@@ -156,3 +156,6 @@ debug=1 일 때 주소 뒤에 alb, lift, keep0, keep1, dexpo, lk, lq 로 숫자�
 색상을 눌러도 크게 보기가 유지되고, 이름표를 다시 누르면 색상 줄이 닫힘
 색상 줄이 열리면 사진이 그 위 공간에 맞춰 작아져서 바닥이 가려지지 않음
 크게 보기가 아닐 때 이름표를 누르면 색상 고르기 창이 열림
+
+2026.11.24a 글꼴 교체
+페이퍼로지에서 프리텐다드 레귤러로 바꿈. 앱 안의 한글 글자는 전부 들어 있는 가벼운 파일(약 260KB)을 씀
