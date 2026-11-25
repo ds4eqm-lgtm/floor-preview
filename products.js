@@ -9,11 +9,13 @@
 // thumb   thumbs 폴더의 작은 미리보기 이미지 (색상 고르기 칸에 보임)
 // width   타일 가로 실제 길이 mm
 // height  타일 세로 실제 길이 mm
-// pattern grid 바둑판 시공, half 반장 엇갈림, stagger 우드 엇갈림 랜덤 시공
+// pattern grid 바둑판 시공, half 반장 엇갈림, stagger 우드 엇갈림 랜덤 시공,
+//         herringbone 헤링본 시공 (image 는 헤링본으로 깔린 모습을 위에서 본 이음매 없이 반복되는 그림, width height 는 그 그림 한 장의 실제 크기 mm)
+// plankW plankH 헤링본처럼 그림 한 장에 판재가 여러 장일 때 판재 한 장 크기 mm (제품 정보에 보임)
 // url     제품 판매 페이지 주소 (없으면 빈칸 "")
 
 // 분류 탭 순서 (처음 열면 맨 앞 탭의 첫 제품이 선택됨)
-window.CATEGORY_ORDER = ["뉴에코홈", "프리미엄600", "프리미엄450", "프리미엄 우드"];
+window.CATEGORY_ORDER = ["뉴에코홈", "프리미엄600", "프리미엄450", "프리미엄 우드", "헤링본시공"];
 
 window.PRODUCTS = [
   {
@@ -602,6 +604,34 @@ window.PRODUCTS = [
     width: 950,
     height: 184,
     pattern: "stagger",
+    url: ""
+  },
+  /* 헤링본시공: 기존 NPW10072, NPW10042 와 같은 제품, 시공 방법만 헤링본
+     그림 한 장 = 판재 950 × 184 mm 를 45도로 깐 반복 무늬 한 칸 (가로 950×√2, 세로 184×√2×5 mm) */
+  {
+    name: "NPW10072(헤링본)",
+    code: "NPW10072HB",
+    category: "헤링본시공",
+    image: "tiles/NPW10072HB.jpg",
+    thumb: "thumbs/NPW10072HB.jpg",
+    width: 1343.5,
+    height: 1301.1,
+    plankW: 184,
+    plankH: 950,
+    pattern: "herringbone",
+    url: ""
+  },
+  {
+    name: "NPW10042(헤링본)",
+    code: "NPW10042HB",
+    category: "헤링본시공",
+    image: "tiles/NPW10042HB.jpg",
+    thumb: "thumbs/NPW10042HB.jpg",
+    width: 1343.5,
+    height: 1301.1,
+    plankW: 184,
+    plankH: 950,
+    pattern: "herringbone",
     url: ""
   }
 ];
